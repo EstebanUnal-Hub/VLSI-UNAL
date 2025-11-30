@@ -1,75 +1,78 @@
-# VLSI-UNAL
-# Implementación Física de FemtoRV: Flujo de Diseño ASIC
+# FemtoRV Physical Implementation: ASIC Flow / Implementación Física de FemtoRV
 
-Este repositorio documenta el proceso completo de diseño, síntesis e implementación física (RTL-to-GDSII) del núcleo **FemtoRV**, un procesador minimalista basado en la arquitectura RISC-V. El objetivo de este proyecto es llevar una descripción de hardware (HDL) hasta un layout listo para fabricación, siguiendo los estándares de la industria VLSI.
+Este repositorio documenta el proceso completo de diseño, síntesis e implementación física (RTL-to-GDSII) del núcleo **FemtoRV**, un procesador minimalista basado en la arquitectura RISC-V. El objetivo de este proyecto es llevar una descripción de hardware (HDL) hasta un layout listo para fabricación.
 
-## 1. Arquitectura del Procesador (FemtoRV)
+---
+
+## 1. Processor Architecture / Arquitectura del Procesador (FemtoRV)
 
 El FemtoRV es un núcleo RISC-V diseñado para ser extremadamente ligero y fácil de entender. Antes de iniciar el flujo físico, es crucial entender la microarquitectura que estamos implementando.
 
-El siguiente diagrama de bloques ilustra la organización interna del procesador, incluyendo la ALU, el banco de registros, el decodificador de instrucciones y las interfaces de memoria:
+El siguiente diagrama de bloques ilustra la organización interna del procesador:
 
-![Diagrama de Bloques FemtoRV](ruta/a/tu_diagrama_de_bloques_femtorv.png)
+![FemtoRV Block Diagram](ruta/a/tu_diagrama_de_bloques_femtorv.png)
 *(Reemplaza esta ruta con la imagen de tu diagrama de bloques)*
 
 ---
 
-## 2. Flujo de Diseño VLSI (ASIC Flow)
+## 2. VLSI Design Flow / Flujo de Diseño VLSI (ASIC Flow)
 
-Para materializar el FemtoRV en silicio, se siguió un flujo de diseño riguroso dividido en dos grandes etapas: **Frontend** (Diseño Lógico) y **Backend** (Diseño Físico). A continuación, se detalla cada fase apoyada en la teoría estándar de VLSI.
+Para materializar el FemtoRV en silicio, se siguió un flujo de diseño riguroso dividido en dos grandes etapas: **Frontend** (Diseño Lógico) y **Backend** (Diseño Físico).
 
-### Fase 1: Diseño Lógico y Funcional (Frontend)
-
+### 2.1. Logic & Functional Design (Frontend) / Diseño Lógico y Funcional
 Esta etapa se centra en la descripción del comportamiento del procesador y su traducción a compuertas lógicas digitales.
 
-![Flujo de Diseño Lógico](ruta/a/VLSI_design_flow1.png)
-*(Diagrama de referencia: Flujo Lógico y Funcional)*
+![Logical Design Flow](ruta/a/VLSI_design_flow1.png)
+*(Reference Diagram 1: Frontend Flow)*
 
 Basado en el diagrama anterior, los pasos ejecutados fueron:
 
-1.  **System Specification & Architectural Design (Especificación):**
-    * Se definieron los requisitos del FemtoRV (set de instrucciones RV32I/E, frecuencia objetivo, área estimada).
-2.  **RTL Description / HDL (Diseño RTL):**
-    * Escritura del código en Verilog/SystemVerilog que describe el comportamiento del hardware.
-3.  **Functional Verification (Verificación Funcional):**
-    * Simulación del RTL para asegurar que el procesador ejecuta las instrucciones correctamente (ej. sumas, saltos, accesos a memoria) antes de pasar a la síntesis.
-4.  **Logic Synthesis (Síntesis Lógica):**
-    * Uso de herramientas de síntesis para transformar el código RTL (leíble por humanos) en un **Gate Level Netlist** (lista de compuertas genéricas).
-5.  **Logic Verification (Verificación Lógica):**
-    * Validación de que el Netlist sintetizado sigue cumpliendo con la funcionalidad original.
+1.  **System Specification & Architectural Design (Especificación):** Definición de requisitos del FemtoRV.
+2.  **RTL Description / HDL (Diseño RTL):** Escritura del código en Verilog.
+3.  **Functional Verification (Verificación Funcional):** Simulación del RTL para asegurar que el procesador ejecuta las instrucciones correctamente.
+4.  **Logic Synthesis (Síntesis Lógica):** Transformación del código RTL a un *Gate Level Netlist*.
+5.  **Logic Verification (Verificación Lógica):** Validación del Netlist.
+
+### 2.2. Physical Design (Backend) / Diseño Físico
+Una vez obtenidas las compuertas lógicas, el siguiente reto es colocarlas físicamente en el área del chip.
+
+![Physical Design Flow](ruta/a/VLSI_design_flow2.png)
+*(Reference Diagram 2: Backend Flow)*
+
+Siguiendo el flujo detallado en la imagen, el proceso consta de:
+
+1.  **Partitioning & Chip Planning (Planificación):** Definición del Floorplan y pines.
+2.  **Placement (Colocación):** Ubicación óptima de las celdas estándar.
+3.  **Clock Tree Synthesis - CTS (Síntesis del Árbol de Reloj):** Distribución sincronizada del reloj.
+4.  **Signal Routing (Enrutado):** Conexión física de todas las celdas.
+5.  **Timing Closure (Cierre de Tiempos):** Verificación de *Setup* y *Hold*.
+6.  **Physical Verification (Verificación Física):** DRC, LVS y generación de GDSII para fabricación.
 
 ---
 
-### Fase 2: Diseño Físico (Backend)
+## 3. Fabrication Platform & Template / Plataforma de Fabricación y Plantilla
 
-Una vez obtenidas las compuertas lógicas, el siguiente reto es colocarlas físicamente en el área del chip y conectarlas. Esta fase convierte el concepto abstracto en geometría real.
+Este proyecto fue diseñado específicamente para ser fabricado a través de **Tiny Tapeout**.
 
-![Flujo de Diseño Físico](ruta/a/VLSI_design_flow2.png)
-*(Diagrama de referencia: Flujo de Diseño Físico)*
+### Tiny Tapeout: Quicker, easier and cheaper to make your own chip!
 
-Siguiendo el flujo detallado en la imagen, el proceso backend consta de:
+**What is Tiny Tapeout? / ¿Qué es Tiny Tapeout?**
+> Tiny Tapeout is an educational project that aims to make it easier and cheaper than ever to get your digital and analog designs manufactured on a real chip.
+>
+> *Tiny Tapeout es un proyecto educativo que tiene como objetivo hacer que sea más fácil y barato que nunca fabricar tus diseños digitales y analógicos en un chip real.*
 
-1.  **Partitioning & Chip Planning (Planificación):**
-    * Definición del **Floorplan**: tamaño del die, ubicación de los pines de entrada/salida (I/O) y creación de la red de alimentación (Power Delivery Network).
-2.  **Placement (Colocación):**
-    * Las celdas estándar (AND, OR, Flip-Flops) generadas en la síntesis se colocan automáticamente en las filas del floorplan, optimizando para reducir la longitud de los cables.
-3.  **Clock Tree Synthesis - CTS (Síntesis del Árbol de Reloj):**
-    * Inserción de buffers e inversores para distribuir la señal de reloj (Clock) a todos los elementos secuenciales del FemtoRV de manera sincronizada, minimizando el *skew*.
-4.  **Signal Routing (Enrutado):**
-    * Conexión física de todas las celdas mediante capas de metal, siguiendo las reglas de diseño (DRC) para evitar cortocircuitos.
-5.  **Timing Closure (Cierre de Tiempos):**
-    * Análisis Estático de Tiempo (STA) para garantizar que el chip funcione a la frecuencia deseada sin violaciones de *Setup* o *Hold*.
-6.  **Physical Verification & Signoff (Verificación Final):**
-    * **DRC:** Verificación de reglas de diseño (geometría correcta).
-    * **LVS:** Layout vs Schematic (el dibujo coincide con el netlist).
-    * Generación final del archivo **GDSII** para fabricación (Fabrication).
+To learn more and get started, visit / Para aprender más visita: [tinytapeout.com](https://tinytapeout.com).
+
+### Project Template Usage / Uso de la Plantilla del Proyecto
+
+Para garantizar la integración correcta en el chip compartido, fue **necesario utilizar el template base oficial**. Esto asegura que el diseño cumpla con las restricciones de pines, área y configuración del entorno de Github Actions.
+
+* **Base Template / Plantilla Base:** Tiny Tapeout Verilog Project Template.
+* **Project Repository / Repositorio del Proyecto:** `EstebanUnal-Hub/VLSI-UNAL`
+* **Significance / Importancia:** Esta plantilla preconfigura el entorno de **OpenLane** y las definiciones de pines necesarias para el shuttle de fabricación.
 
 ---
 
-## 3. Herramientas y Entorno (Environment Setup)
+## 4. Tools & Environment / Herramientas y Entorno
 
-*(Esta sección se completará en el siguiente paso, aquí detallaremos las versiones de software como OpenLane, Yosys, etc.)*
-
-## 4. Instalación y Uso
-
-*(Instrucciones para reproducir el flujo)*
+*(Próxima sección a completar...)*

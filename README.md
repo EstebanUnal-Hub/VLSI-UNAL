@@ -1,6 +1,6 @@
 # FemtoRV Physical Implementation: ASIC Flow / Implementación Física de FemtoRV
 
-Este repositorio documenta el proceso completo de diseño, síntesis e implementación física (RTL-to-GDSII) del núcleo **FemtoRV**, un procesador minimalista basado en la arquitectura RISC-V. El objetivo de este proyecto es llevar una descripción de hardware (HDL) hasta un layout listo para fabricación.
+Este repositorio documenta el proceso completo de diseño, síntesis e implementación física (RTL-to-GDSII) del núcleo **FemtoRV**, un procesador basado en la arquitectura RISC-V. El objetivo de este proyecto es llevar una descripción de hardware (HDL) hasta un layout listo para fabricación. Además, se utiliza **Tiny Tapeout** con el fin de realizar la fabricación del chip.
 
 ---
 
@@ -27,7 +27,7 @@ Esta etapa se centra en la descripción del comportamiento del procesador y su t
 
 Basado en el diagrama anterior, los pasos ejecutados fueron:
 
-1.  **System Specification & Architectural Design (Especificación):** Definición de requisitos del FemtoRV.
+1.  **System Specification & Architectural Design (Especificación):** Definición de requisitos del FemtoRV, es decir, entradas y salidas hacia los periféricos y formas de comunicación con el procesador.
 2.  **RTL Description / HDL (Diseño RTL):** Escritura del código en Verilog.
 3.  **Functional Verification (Verificación Funcional):** Simulación del RTL para asegurar que el procesador ejecuta las instrucciones correctamente.
 4.  **Logic Synthesis (Síntesis Lógica):** Transformación del código RTL a un *Gate Level Netlist*.
@@ -75,4 +75,34 @@ Para garantizar la integración correcta en el chip compartido, fue **necesario 
 
 ## 4. Tools & Environment / Herramientas y Entorno
 
-*(Próxima sección a completar...)*
+Para replicar este diseño, se requiere un entorno basado en Linux (Ubuntu recomendado). A continuación, se describen las herramientas utilizadas y su función específica dentro del flujo ASIC descrito en la **Sección 2**.
+
+### Tool Description / Descripción de las Herramientas
+
+* **OpenLane (The Orchestrator):** Es la herramienta principal que automatiza todo el flujo **RTL-to-GDSII**. OpenLane conecta y coordina todas las demás herramientas (Yosys, OpenROAD, Magic, etc.) para pasar de la Sección 2.1 a la 2.2 de forma automatizada.
+* **Icarus Verilog & GTKWave:** Pertenecen a la etapa de **Functional Verification** (Sección 2.1). Icarus compila y simula el código Verilog del FemtoRV, y GTKWave permite visualizar las ondas para depurar errores.
+* **Yosys:** Ejecuta la **Logic Synthesis** (Sección 2.1). Traduce el código Verilog legible por humanos a una lista de compuertas (Netlist) optimizada.
+* **OpenSTA:** Crítico para el **Timing Closure** (Sección 2.2). Realiza el análisis estático de tiempo para asegurar que el procesador cumpla con las frecuencias requeridas sin violaciones de *Setup* o *Hold*.
+* **Magic VLSI:** Utilizado en la **Physical Verification** (Sección 2.2). Permite visualizar el layout final (.gds) y realizar comprobaciones de reglas de diseño (DRC).
+* **Ngspice:** Simulador de circuitos a nivel transistor, útil para validaciones analógicas y caracterización.
+
+---
+
+### Installation Guide / Guía de Instalación
+
+A continuación se detallan los comandos para configurar el entorno en Ubuntu.
+
+#### 1. Yosys
+Framework para síntesis Verilog-RTL.
+
+```bash
+git clone [https://github.com/YosysHQ/yosys.git](https://github.com/YosysHQ/yosys.git)
+cd yosys
+sudo apt install make
+sudo apt-get install build-essential clang bison flex \
+    libreadline-dev gawk tcl-dev libffi-dev git \
+    graphviz xdot pkg-config python3 libboost-system-dev \
+    libboost-python-dev libboost-filesystem-dev zlib1g-dev
+make config-gcc
+make
+sudo make install

@@ -36,7 +36,7 @@ Basado en el diagrama anterior, los pasos ejecutados fueron:
 ### 2.2. Physical Design (Backend) / Diseño Físico
 Una vez obtenidas las compuertas lógicas, el siguiente reto es colocarlas físicamente en el área del chip.
 
-![Physical Design Flow](Documents/ASIC Flow/VLSI_design_flow2.png)
+![Physical Design Flow](Documents/ASIC_Flow/VLSI_design_flow2.png)
 *(Reference Diagram 2: Backend Flow)*
 
 Siguiendo el flujo detallado en la imagen, el proceso consta de:

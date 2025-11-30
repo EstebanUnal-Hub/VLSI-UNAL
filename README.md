@@ -22,7 +22,7 @@ Para materializar el FemtoRV en silicio, se siguió un flujo de diseño riguroso
 ### 2.1. Logic & Functional Design (Frontend) / Diseño Lógico y Funcional
 Esta etapa se centra en la descripción del comportamiento del procesador y su traducción a compuertas lógicas digitales.
 
-![Logical Design Flow](Documents/ASIC Flow/VLSI_design_flow1.png)
+![Logical Design Flow](Documents/ASIC_Flow/VLSI_design_flow1.png)
 *(Reference Diagram 1: Frontend Flow)*
 
 Basado en el diagrama anterior, los pasos ejecutados fueron:

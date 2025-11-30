@@ -92,17 +92,114 @@ Para replicar este diseño, se requiere un entorno basado en Linux (Ubuntu recom
 
 A continuación se detallan los comandos para configurar el entorno en Ubuntu.
 
+# Open Source ASIC Flow Tools Setup
+
 #### 1. Yosys
 Framework para síntesis Verilog-RTL.
 
 ```bash
-git clone [https://github.com/YosysHQ/yosys.git](https://github.com/YosysHQ/yosys.git)
+git clone https://github.com/YosysHQ/yosys.git
 cd yosys
 sudo apt install make
-sudo apt-get install build-essential clang bison flex \
-    libreadline-dev gawk tcl-dev libffi-dev git \
-    graphviz xdot pkg-config python3 libboost-system-dev \
-    libboost-python-dev libboost-filesystem-dev zlib1g-dev
+sudo apt-get install build-essential clang bison flex     libreadline-dev gawk tcl-dev libffi-dev git     graphviz xdot pkg-config python3 libboost-system-dev     libboost-python-dev libboost-filesystem-dev zlib1g-dev
 make config-gcc
 make
 sudo make install
+```
+
+#### 2. Icarus Verilog
+Compilador Verilog que genera netlists y soporta múltiples estándares.
+
+```bash
+sudo apt-get install iverilog
+```
+
+#### 3. GTKWave
+Visualizador de ondas compatible con VCD.
+
+```bash
+sudo apt install gtkwave
+```
+
+#### 4. ngspice
+Simulador SPICE de código abierto.
+
+```bash
+sudo apt-get install build-essential
+sudo apt-get install libxaw7-dev
+
+tar -zxvf ngspice-40.tar.gz
+cd ngspice-40
+mkdir release
+cd release
+../configure --with-x --with-readline=yes --disable-debug
+make
+sudo make install
+```
+
+#### 5. OpenSTA
+Verificador de timing estático.
+
+```bash
+sudo apt-get install cmake clang gcc tcl swig bison flex
+
+git clone https://github.com/The-OpenROAD-Project/OpenSTA.git
+cd OpenSTA
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+```
+
+#### 6. Magic
+Herramienta de layout y DRC.
+
+```bash
+sudo apt-get install m4 tcsh csh libx11-dev tcl-dev tk-dev libcairo2-dev mesa-common-dev libglu1-mesa-dev libncurses-dev
+
+git clone https://github.com/RTimothyEdwards/magic
+cd magic
+./configure
+make
+sudo make install
+```
+
+#### 7. OpenLane & Docker
+Flujo RTL-to-GDSII.
+
+```bash
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt install -y build-essential python3 python3-venv python3-pip make git
+
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=amd64 signed-by=/usr/share-keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io
+
+sudo groupadd docker
+sudo usermod -aG docker $USER
+```
+
+Instalación de OpenLane:
+
+```bash
+cd $HOME
+git clone https://github.com/The-OpenROAD-Project/OpenLane
+cd OpenLane
+make
+make test
+```
+
+#### 8. PDKs
+Google/SkyWater SKY130  
+https://github.com/google/skywater-pdk  
+
+OpenPDK  
+https://github.com/The-OpenROAD-Project/OpenPDK  
+
+#### 9. Referencias
+YOSYS, Icarus Verilog, GTKWave, Ngspice, OPENSTA, OpenLane, OpenPDK

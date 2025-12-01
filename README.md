@@ -67,8 +67,8 @@ To learn more and get started, visit / Para aprender más visita: [tinytapeout.c
 
 Para garantizar la integración correcta en el chip compartido, fue **necesario utilizar el template base oficial**. Esto asegura que el diseño cumpla con las restricciones de pines, área y configuración del entorno de Github Actions.
 
-* **Base Template / Plantilla Base:** Tiny Tapeout Verilog Project Template.
-* **Project Repository / Repositorio del Proyecto:** `EstebanUnal-Hub/VLSI-UNAL`
+* **Base Template / Plantilla Base:** Tiny Tapeout Verilog Project Template:https://github.com/TinyTapeout/ttsky-verilog-template
+* **Project Repository / Repositorio del Proyecto:** `EstebanUnal-Hub/VLSI-UNAL`:https://github.com/EstebanUnal-Hub/FemtoRV_UN
 * **Significance / Importancia:** Esta plantilla preconfigura el entorno de **OpenLane** y las definiciones de pines necesarias para el shuttle de fabricación.
 
 ---
@@ -618,6 +618,10 @@ ext2spice
 - `femto.ext` - Archivo de extracción intermedio
 - `femto.spice` - Netlist SPICE con parásitos RLC
 
+A continuacion puede ver la imagen con los archivos intermedios generados
+![Contador de programa en entero ](Documents/SPICE/mag.png)
+*Se visualizar el contador de programa en entero y se puede ver los cambios que tiene el transcurso del tiempo.*
+
 El archivo `femto.spice` contiene:
 - Subcircuitos de todas las celdas estándar
 - Capacitancias parásitas entre nodos
@@ -777,7 +781,7 @@ python plot_femto.py femto.raw
 ![Señales del contador de programa ](Documents/SPICE/PC.png)
 *Se visualizar los bits asociados al contador de programa y se puede ver los cambios que tiene el transcurso del tiempo.*
 
-![Contador de programa en entero ](Documents/SPICE/PC.png)
+![Contador de programa en entero ](Documents/SPICE/PC_INT.png)
 *Se visualizar el contador de programa en entero y se puede ver los cambios que tiene el transcurso del tiempo.*
 
 **Análisis de resultados:**
@@ -840,6 +844,14 @@ Tras completar el flujo RTL-to-GDSII, OpenLane genera reportes detallados sobre 
 - [Magic VLSI Layout Tool](http://opencircuitdesign.com/magic/)
 - [Xyce Parallel Electronic Simulator](https://xyce.sandia.gov/)
 - [PySpice Documentation](https://pypi.org/project/ltspice/)
+- [Repositorio original: Introduction to ASIC Flow](https://github.com/KanishR1/Introduction-to-ASIC-Flow)
+- [Pagina Web YOSYS](https://yosyshq.net/yosys/)
+- [Github Icarus verilog](https://steveicarus.github.io/iverilog/)
+- [Github OPENSTA](https://github.com/The-OpenROAD-Project/OpenSTA)
+- [Pagina Web GTKWAVE](https://gtkwave.sourceforge.net/)
+- [Github OpenLane](https://github.com/The-OpenROAD-Project/OpenLane)
+- [Pagina Ngspice](https://ngspice.sourceforge.io/)
+- [Github OpenPDK](https://github.com/RTimothyEdwards/open_pdks)
 
 ---
 

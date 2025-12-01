@@ -92,8 +92,6 @@ Para replicar este diseño, se requiere un entorno basado en Linux (Ubuntu recom
 
 A continuación se detallan los comandos para configurar las herramientas en el entorno de Ubuntu.
 
-
-
 #### 1. Yosys
 Framework para síntesis Verilog-RTL 
 
@@ -426,18 +424,315 @@ Durante la simulación se debe verificar:
 **Captura de simulación GTKWave:**
 
 ![Simulación GTKWave del FemtoRV](Documents/SIM/GTKWAVE.png)
-*Simulación funcional del procesador FemtoRV ejecutando el firmware de calculadora. Se observan las señales de reloj, contador de programa,y comunicación UART.*
+*Simulación funcional del procesador FemtoRV ejecutando el firmware de calculadora. Se observan las señales de reloj, contador de programa, y comunicación UART.*
+
+#### 5.2.4. Exportación de Señales para Simulación Post-Layout
+
+Una vez verificado el comportamiento funcional del diseño, es necesario exportar las señales de interés desde GTKWave para su posterior uso en simulaciones SPICE post-layout.
+
+**Exportar señales a formato TIM:**
+
+Desde GTKWave, seleccionar las señales relevantes (clk, reset, señales de entrada/salida) y exportarlas:
+
+```
+File → Write → Save File As → [nombre].tim
+```
+
+Esto genera un archivo de texto con los valores de las señales en función del tiempo, compatible para conversión a formato PWL (Piecewise Linear) utilizado en SPICE.
 
 ---
 
-### 5.3. Siguientes Pasos del Flujo
+### 5.3. Logic Synthesis con OpenLane (Paso 4 del Frontend)
 
-Una vez completada y verificada la simulación funcional, el diseño está listo para continuar con:
+Una vez completada la verificación funcional, el siguiente paso es sintetizar el diseño RTL a un netlist de compuertas utilizando **OpenLane**.
 
-- **Logic Synthesis** (Paso 4 del Frontend) → Conversión del RTL a netlist
-- **Logic Verification** (Paso 5 del Frontend) → Verificación post-síntesis
-- **Physical Design** (Backend completo) → Implementación física del chip
+#### 5.3.1. Preparación del Entorno OpenLane
 
-Estas etapas se describirán en las siguientes secciones del documento.
-prueba
+**Dar permisos a la carpeta del PDK:**
+
+```bash
+sudo chown -R $USER:$USER /home/linux/.volare
+```
+
+**Iniciar OpenLane:**
+
+```bash
+cd ~/OpenLane
+make pdk
+make mount
+```
+
+#### 5.3.2. Configuración del Diseño FemtoRV
+
+**Crear estructura de diseño:**
+
+```bash
+# Dentro del contenedor de OpenLane
+./flow.tcl -design femto -init_design_config -add_to_designs
+```
+
+Esto crea la estructura:
+```
+OpenLane/designs/femto/
+├── src/              # Copiar aquí los archivos .v del diseño
+└── config.json       # Archivo de configuración
+```
+
+**Copiar archivos fuente:**
+
+```bash
+cp femtoRV_ASIC_Flow/sim/src/*.v ~/OpenLane/designs/femto/src/
+```
+
+#### 5.3.3. Configuración de Parámetros de Síntesis
+
+Editar el archivo `config.json` dentro de `~/OpenLane/designs/femto/`:
+
+```json
+{
+    "DESIGN_NAME": "femto",
+    "VERILOG_FILES": "dir::src/*.v",
+    "CLOCK_PORT": "clk",
+    "CLOCK_PERIOD": 30.0,
+    "DESIGN_IS_CORE": true,
+    "PL_RESIZER_HOLD_FIX": 1,
+    "PL_RESIZER_TIMING_OPTIMIZATIONS": 1,
+    "CTS_HOLD_FIX": 1,
+    "FP_PDN_VOFFSET": 20,
+    "FP_PDN_HOFFSET": 20,
+    "FP_TAPCELL_DIST": 13
+}
+```
+
+**Parámetros clave:**
+- `CLOCK_PERIOD: 30.0` → Período de reloj de 30 ns (33.3 MHz). **Ajustar si hay errores de timing.**
+- `DESIGN_IS_CORE: true` → Indica que es un diseño de núcleo completo
+- `PL_RESIZER_*` → Optimizaciones de timing durante placement
+- `FP_PDN_*` → Offsets para la red de distribución de potencia
+
+#### 5.3.4. Ejecución del Flujo RTL-to-GDSII
+
+**Ejecutar flujo completo:**
+
+```bash
+./flow.tcl -design femto -tag full_guide -overwrite
+```
+
+Este comando ejecuta automáticamente:
+1. ✅ **Synthesis** (Yosys) - Conversión RTL a netlist
+2. ✅ **Floorplanning** - Definición del área del chip
+3. ✅ **Placement** - Colocación de celdas estándar
+4. ✅ **CTS** - Síntesis del árbol de reloj
+5. ✅ **Routing** - Enrutado de señales
+6. ✅ **Verification** - DRC, LVS, antenna checks
+7. ✅ **GDSII Generation** - Layout final
+
+**Resultados generados:**
+
+```
+~/OpenLane/designs/femto/runs/full_guide/results/
+├── final/
+│   ├── gds/
+│   │   └── femto.gds          # Layout GDSII
+│   ├── mag/
+│   │   └── femto.mag          # Layout en formato Magic
+│   ├── def/
+│   │   └── femto.def          # Design Exchange Format
+│   └── lef/
+│       └── femto.lef          # Library Exchange Format
+└── reports/
+    ├── synthesis/
+    ├── placement/
+    ├── routing/
+    └── signoff/
+```
+
 ---
+
+### 5.4. Post-Layout Extraction con Magic (Paso 6 del Backend)
+
+Una vez generado el layout físico (.mag), es necesario extraer el netlist SPICE con parásitos (capacitancias, resistencias) para realizar simulaciones realistas post-layout.
+
+#### 5.4.1. Preparar Archivos Magic
+
+**Navegar al directorio de resultados:**
+
+```bash
+cd ~/OpenLane/designs/femto/runs/full_guide/results/final/mag
+```
+
+**Corregir rutas del PDK en archivos .mag:**
+
+Los archivos `.mag` generados por OpenLane contienen variables `$PDKPATH` que deben reemplazarse por la ruta real:
+
+```bash
+sed -i 's|\$PDKPATH|/home/linux/.volare/sky130A|g' *.mag
+```
+
+#### 5.4.2. Visualización del Layout en Magic
+
+**Abrir el layout:**
+
+```bash
+magic -T /home/linux/.volare/sky130A/libs.tech/magic/sky130A.tech femto.mag
+```
+
+**Visualización del chip FemtoRV:**
+
+![Layout del chip FemtoRV en Magic](ruta/a/imagen/magic_layout.png)
+*Layout físico del procesador FemtoRV generado con OpenLane. Se observan las celdas estándar, interconexiones y estructura del chip.*
+
+#### 5.4.3. Extracción de Parásitos
+
+Dentro de la consola de Magic:
+
+```tcl
+# Extraer el circuito desde el layout
+extract all
+
+# Convertir la extracción a modelo SPICE
+ext2spice cthresh 0 rthresh 0
+ext2spice
+```
+
+**Archivos generados:**
+- `femto.ext` - Archivo de extracción intermedio
+- `femto.spice` - Netlist SPICE con parásitos RLC
+
+El archivo `femto.spice` contiene:
+- Subcircuitos de todas las celdas estándar
+- Capacitancias parásitas entre nodos
+- Resistencias de interconexión
+- Modelos de transistores del PDK
+
+---
+
+### 5.5. Conversión de Estímulos: TIM → PWL → SPICE
+
+Para simular el diseño post-layout con Ngspice, es necesario convertir los estímulos exportados desde GTKWave (formato `.tim`) a formato PWL (Piecewise Linear) compatible con SPICE.
+
+#### 5.5.1. Script Python para Conversión
+
+**Crear archivo `tim_to_pwl.py`:**
+se ecunetra dentro de la carpeta femtoRV_ASIC_Flow, y luego en spice
+
+#### 5.5.2. Uso del Script
+
+```bash
+# Convertir archivos TIM exportados desde GTKWave
+python3 tim_to_pwl.py
+```
+
+**Análisis de resultados:**
+
+Los resultados pueden visualizarse para verificar:
+- Propagación de señales a través del chip real
+- Delays introducidos por las capacitancias parásitas
+- Efectos de carga en las salidas
+- Consumo de corriente del circuito
+
+---
+
+### 5.6. Flujo Alternativo: Tiny Tapeout GitHub Actions
+
+Para proyectos que utilizan la plataforma Tiny Tapeout, el flujo de síntesis y verificación se puede ejecutar automáticamente mediante GitHub Actions.
+
+#### 5.6.1. Configuración del Repositorio
+
+Al hacer push al repositorio del template de Tiny Tapeout, GitHub Actions ejecuta automáticamente:
+- Verificación de sintaxis
+- Síntesis con OpenLane
+- Generación de GDSII
+- Verificación DRC/LVS
+
+#### 5.6.2. Descarga de Artefactos
+
+Una vez completado el workflow:
+
+1. Ir a la pestaña **Actions** en GitHub
+2. Seleccionar el run exitoso
+3. Descargar el artefacto `tt_submission`
+
+**Contenido de `tt_submission`:**
+```
+tt_submission/
+├── femto.gds          # Layout final
+├── femto.lef          # Abstract view
+└── reports/           # Reportes de timing, área, etc.
+```
+
+![Artefactos de GitHub Actions](ruta/a/imagen/github_artifacts.png)
+*Artefactos generados por GitHub Actions tras ejecutar el flujo OpenLane en Tiny Tapeout.*
+
+#### 5.6.3. Extracción SPICE desde GDS
+
+El archivo `.gds` descargado también puede ser procesado con Magic para extracción SPICE:
+
+```bash
+# Cargar el GDS en Magic
+magic -T /home/linux/.volare/sky130A/libs.tech/magic/sky130A.tech femto.gds
+
+# Dentro de Magic:
+extract all
+ext2spice cthresh 0 rthresh 0
+ext2spice
+```
+
+Esto genera un netlist SPICE equivalente al del flujo local, pero basado directamente en el GDSII de fabricación.
+
+---
+
+## 6. Results & Verification / Resultados y Verificación
+
+### 6.1. Métricas del Diseño
+
+Tras completar el flujo RTL-to-GDSII, OpenLane genera reportes detallados sobre el diseño:
+
+| Métrica | Valor |
+|---------|-------|
+| Área total | [TBD] µm² |
+| Utilización | [TBD]% |
+| Número de celdas | [TBD] |
+| Frecuencia máxima | [TBD] MHz |
+| Violaciones DRC | 0 |
+| Violaciones LVS | 0 |
+
+### 6.2. Verificaciones Completadas
+
+✅ **Functional Verification:** Simulación RTL exitosa  
+✅ **Logic Synthesis:** Netlist generado sin errores  
+✅ **Physical Implementation:** GDSII generado  
+✅ **DRC:** Sin violaciones de reglas de diseño  
+✅ **LVS:** Layout coincide con netlist  
+✅ **Post-Layout Extraction:** SPICE netlist extraído  
+✅ **SPICE Simulation:** [Pendiente/Completado]
+
+---
+
+## 7. Next Steps / Próximos Pasos
+
+- [ ] Optimización de frecuencia de reloj
+- [ ] Simulaciones de corner cases (tt, ff, ss)
+- [ ] Análisis de consumo de potencia
+- [ ] Preparación para tapeout final
+
+---
+
+## 8. References / Referencias
+
+- [FemtoRV GitHub Repository](https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV)
+- [Tiny Tapeout Documentation](https://tinytapeout.com/docs)
+- [OpenLane Documentation](https://openlane.readthedocs.io)
+- [SkyWater PDK Documentation](https://skywater-pdk.readthedocs.io)
+- [Magic VLSI Layout Tool](http://opencircuitdesign.com/magic/)
+
+---
+
+## License / Licencia
+
+Este proyecto se distribuye bajo [especificar licencia].
+
+---
+
+**Maintainers:** [Tu nombre/equipo]  
+**Contact:** [email de contacto]

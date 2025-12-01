@@ -626,20 +626,82 @@ El archivo `femto.spice` contiene:
 
 ---
 
-### 5.5. SPICE Simulation & Analysis / Simulación y Análisis SPICE
+### 5.5. Flujo Alternativo: Tiny Tapeout GitHub Actions
+
+Para proyectos que utilizan la plataforma Tiny Tapeout, el flujo de síntesis y verificación se puede ejecutar automáticamente mediante GitHub Actions.
+
+#### 5.5.1. Configuración del Repositorio
+
+Al hacer push al repositorio del template de Tiny Tapeout, GitHub Actions ejecuta automáticamente:
+- Verificación de sintaxis
+- Síntesis con OpenLane
+- Generación de GDSII
+- Verificación DRC/LVS
+
+#### 5.5.2. Descarga de Artefactos
+
+Una vez completado el workflow:
+
+1. Ir a la pestaña **Actions** en GitHub
+2. Seleccionar el run exitoso
+3. Descargar el artefacto `tt_submission`
+
+**Contenido de `tt_submission`:**
+```
+tt_submission/
+├── tt_um_femto.gds          # Layout final
+├── femttt_um_femto.lef          # Abstract view
+└── reports/           # Reportes de timing, área, etc.
+```
+
+![Artefactos de GitHub Actions](ruta/a/imagen/github_artifacts.png)
+*Artefactos generados por GitHub Actions tras ejecutar el flujo OpenLane en Tiny Tapeout.*
+
+#### 5.5.3. Extracción SPICE desde GDS
+
+El archivo `.gds` descargado también puede ser procesado con Magic para extracción SPICE:
+
+```bash
+# Cargar el GDS en Magic
+magic -T /home/linux/.volare/sky130A/libs.tech/magic/sky130A.tech femto.gds
+
+# Dentro de Magic:
+extract all
+ext2spice cthresh 0 rthresh 0
+ext2spice
+```
+
+Esto genera un netlist SPICE equivalente al del flujo local, pero basado directamente en el GDSII de fabricación.
+
+A su vez tambien podemo visualizar el chip completo de tt_um_femto:
+
+![Layout del chip FemtoRV en Magic con Tiny TypeOut](Documents/SPICE/tt_um_femto.png)
+*Layout físico del procesador FemtoRV generado con Tiny TypeOut. Se observan las celdas estándar, interconexiones y estructura del chip.*
+
+Adicionalmente se pude utilziar la herramienta de viewer gds, del siguiente link: 
+https://gds-viewer.tinytapeout.com/
+
+Se obtiene la visualizacion del chip
+
+![Layout del chip FemtoRV en Magic con Tiny TypeOut](Documents/SPICE/Viewer.png)
+*Layout físico del procesador FemtoRV generado con Tiny TypeOut visto desde GDS Viewer. Se observan las celdas estándar, interconexiones y estructura del chip.*
+
+---
+
+### 5.6. SPICE Simulation & Analysis / Simulación y Análisis SPICE
 
 Una vez extraído el netlist SPICE post-layout, se procede con la simulación utilizando **Xyce** (simulador paralelo de alto rendimiento) y el análisis de resultados con Python.
 
 **Ubicación:** `femtoRV_ASIC_Flow/spice/`
 
-#### 5.5.1. Conversión de Estímulos: TIM → PWL
+#### 5.6.1. Conversión de Estímulos: TIM → PWL
 
 Para simular el diseño post-layout, es necesario convertir los estímulos exportados desde GTKWave (formato `.tim`) a formato PWL (Piecewise Linear) compatible con SPICE.
 
 **Script `tim_to_pwl.py`:**
 
 
-#### 5.5.2. Configuración de Xyce para Sky130
+#### 5.6.2. Configuración de Xyce para Sky130
 
 **IMPORTANTE - Modificación requerida del PDK:**
 
@@ -653,7 +715,7 @@ sudo nano /usr/local/share/pdk/sky130A/libs.ref/sky130_fd_pr/spice/sky130_fd_pr_
 *+ level = 3.0
 ```
 
-#### 5.5.3. Automatización con Makefile
+#### 5.6.3. Automatización con Makefile
 
 **Archivo `Makefile` en `femtoRV_ASIC_Flow/spice/`:**
 
@@ -709,11 +771,14 @@ python plot_femto.py femto.raw
 
 **Gráficas generadas:**
 
-![Señales SPI Flash y RAM](ruta/a/imagen/femto_spi_interfaces.png)
+![Señales SPI Flash y RAM](Documents/SPICE/Otras.png)
 *Interfaces SPI del procesador FemtoRV. Se observan las señales MOSI (Master Out Slave In) y MISO (Master In Slave Out) para memoria Flash y RAM.*
 
-![Comparación MOSI/MISO](ruta/a/imagen/femto_mosi_miso_comparison.png)
-*Comparación de señales MOSI y MISO entre las interfaces de Flash y RAM. Permite verificar la correcta comunicación del procesador con las memorias externas.*
+![Señales del contador de programa ](Documents/SPICE/PC.png)
+*Se visualizar los bits asociados al contador de programa y se puede ver los cambios que tiene el transcurso del tiempo.*
+
+![Contador de programa en entero ](Documents/SPICE/PC.png)
+*Se visualizar el contador de programa en entero y se puede ver los cambios que tiene el transcurso del tiempo.*
 
 **Análisis de resultados:**
 
@@ -726,66 +791,7 @@ Los resultados pueden visualizarse para verificar:
 
 ---
 
-### 5.6. Flujo Alternativo: Tiny Tapeout GitHub Actions
 
-Para proyectos que utilizan la plataforma Tiny Tapeout, el flujo de síntesis y verificación se puede ejecutar automáticamente mediante GitHub Actions.
-
-#### 5.6.1. Configuración del Repositorio
-
-Al hacer push al repositorio del template de Tiny Tapeout, GitHub Actions ejecuta automáticamente:
-- Verificación de sintaxis
-- Síntesis con OpenLane
-- Generación de GDSII
-- Verificación DRC/LVS
-
-#### 5.6.2. Descarga de Artefactos
-
-Una vez completado el workflow:
-
-1. Ir a la pestaña **Actions** en GitHub
-2. Seleccionar el run exitoso
-3. Descargar el artefacto `tt_submission`
-
-**Contenido de `tt_submission`:**
-```
-tt_submission/
-├── tt_um_femto.gds          # Layout final
-├── femttt_um_femto.lef          # Abstract view
-└── reports/           # Reportes de timing, área, etc.
-```
-
-![Artefactos de GitHub Actions](ruta/a/imagen/github_artifacts.png)
-*Artefactos generados por GitHub Actions tras ejecutar el flujo OpenLane en Tiny Tapeout.*
-
-#### 5.6.3. Extracción SPICE desde GDS
-
-El archivo `.gds` descargado también puede ser procesado con Magic para extracción SPICE:
-
-```bash
-# Cargar el GDS en Magic
-magic -T /home/linux/.volare/sky130A/libs.tech/magic/sky130A.tech femto.gds
-
-# Dentro de Magic:
-extract all
-ext2spice cthresh 0 rthresh 0
-ext2spice
-```
-
-Esto genera un netlist SPICE equivalente al del flujo local, pero basado directamente en el GDSII de fabricación.
-
-A su vez tambien podemo visualizar el chip completo de tt_um_femto:
-
-![Layout del chip FemtoRV en Magic con Tiny TypeOut](Documents/SPICE/tt_um_femto.png)
-*Layout físico del procesador FemtoRV generado con Tiny TypeOut. Se observan las celdas estándar, interconexiones y estructura del chip.*
-
-Adicionalmente se pude utilziar la herramienta de viewer gds, del siguiente link: 
-https://gds-viewer.tinytapeout.com/
-
-Se obtiene la visualizacion del chip
-
-![Layout del chip FemtoRV en Magic con Tiny TypeOut](Documents/SPICE/Viewer.png)
-*Layout físico del procesador FemtoRV generado con Tiny TypeOut visto desde GDS Viewer. Se observan las celdas estándar, interconexiones y estructura del chip.*
----
 
 ## 6. Results & Verification / Resultados y Verificación
 

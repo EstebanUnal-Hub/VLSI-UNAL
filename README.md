@@ -1,163 +1,211 @@
-# FemtoRV Physical Implementation: ASIC Flow / Implementación Física de FemtoRV
+# FemtoRV Physical Implementation: ASIC Flow
 
-Este repositorio documenta el proceso completo de diseño, síntesis e implementación física (RTL-to-GDSII) del núcleo **FemtoRV**, un procesador basado en la arquitectura RISC-V. El objetivo de este proyecto es llevar una descripción de hardware (HDL) hasta un layout listo para fabricación. Además, se utiliza **Tiny Tapeout** con el fin de realizar la fabricación del chip.
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![RISC-V](https://img.shields.io/badge/ISA-RISC--V-orange.svg)](https://riscv.org/)
+[![Tiny Tapeout](https://img.shields.io/badge/Platform-Tiny%20Tapeout-green.svg)](https://tinytapeout.com)
+
+Este repositorio documenta el proceso completo de diseño, síntesis e implementación física (RTL-to-GDSII) del núcleo **FemtoRV**, un procesador basado en la arquitectura RISC-V. El objetivo de este proyecto es llevar una descripción de hardware (HDL) hasta un layout listo para fabricación utilizando **Tiny Tapeout**.
+
+*This repository documents the complete design, synthesis, and physical implementation (RTL-to-GDSII) process of the **FemtoRV** core, a RISC-V based processor. The goal is to take an HDL description to a fabrication-ready layout using **Tiny Tapeout**.*
 
 ---
 
-## 1. Processor Architecture / Arquitectura del Procesador (FemtoRV)
+## 📑 Tabla de Contenidos / Table of Contents
 
-El FemtoRV es un núcleo RISC-V diseñado para ser extremadamente ligero y fácil de entender. Antes de iniciar el flujo físico, es crucial entender la microarquitectura que estamos implementando.
+1. [Arquitectura del Procesador](#1-processor-architecture--arquitectura-del-procesador)
+2. [Flujo de Diseño VLSI](#2-vlsi-design-flow--flujo-de-diseño-vlsi)
+3. [Plataforma de Fabricación](#3-fabrication-platform--plataforma-de-fabricación)
+4. [Herramientas y Entorno](#4-tools--environment--herramientas-y-entorno)
+5. [Guía de Instalación](#5-installation-guide--guía-de-instalación)
+6. [Recursos Adicionales](#6-additional-resources--recursos-adicionales)
 
-El siguiente diagrama de bloques ilustra la organización interna del procesador:
+---
+
+## 1. Processor Architecture / Arquitectura del Procesador
+
+El **FemtoRV** es un núcleo RISC-V diseñado para ser extremadamente ligero y fácil de entender, ideal para aplicaciones educativas y proyectos de hardware de código abierto.
+
+*The **FemtoRV** is a RISC-V core designed to be extremely lightweight and easy to understand, ideal for educational applications and open-source hardware projects.*
+
+### Características Principales / Key Features
+
+- ✅ Arquitectura RISC-V RV32I
+- ✅ Diseño minimalista y altamente optimizado
+- ✅ Compatible con el flujo de diseño open-source
+- ✅ Documentación completa del proceso RTL-to-GDSII
 
 ![FemtoRV Block Diagram](ruta/a/tu_diagrama_de_bloques_femtorv.png)
-*(Reemplaza esta ruta con la imagen de tu diagrama de bloques)*
+*Diagrama de bloques del procesador FemtoRV / FemtoRV processor block diagram*
 
 ---
 
-## 2. VLSI Design Flow / Flujo de Diseño VLSI (ASIC Flow)
+## 2. VLSI Design Flow / Flujo de Diseño VLSI
 
-Para materializar el FemtoRV en silicio, se siguió un flujo de diseño riguroso dividido en dos grandes etapas: **Frontend** (Diseño Lógico) y **Backend** (Diseño Físico).
+El flujo de diseño ASIC se divide en dos etapas principales: **Frontend** (diseño lógico) y **Backend** (diseño físico).
 
-### 2.1. Logic & Functional Design (Frontend) / Diseño Lógico y Funcional
-Esta etapa se centra en la descripción del comportamiento del procesador y su traducción a compuertas lógicas digitales.
+*The ASIC design flow is divided into two main stages: **Frontend** (logic design) and **Backend** (physical design).*
+
+### 2.1. Frontend: Logic & Functional Design
+
+Etapa centrada en la descripción del comportamiento del procesador y su verificación funcional.
 
 ![Logical Design Flow](Documents/ASIC_Flow/VLSI_design_flow1.png)
-*(Reference Diagram 1: Frontend Flow)*
 
-Basado en el diagrama anterior, los pasos ejecutados fueron:
+**Pasos del Frontend / Frontend Steps:**
 
-1.  **System Specification & Architectural Design (Especificación):** Definición de requisitos del FemtoRV, es decir, entradas y salidas hacia los periféricos y formas de comunicación con el procesador.
-2.  **RTL Description / HDL (Diseño RTL):** Escritura del código en Verilog.
-3.  **Functional Verification (Verificación Funcional):** Simulación del RTL para asegurar que el procesador ejecuta las instrucciones correctamente.
-4.  **Logic Synthesis (Síntesis Lógica):** Transformación del código RTL a un *Gate Level Netlist*.
-5.  **Logic Verification (Verificación Lógica):** Validación del Netlist.
+1. **System Specification** - Definición de requisitos y especificaciones
+2. **RTL Description** - Implementación en Verilog
+3. **Functional Verification** - Simulación y validación del comportamiento
+4. **Logic Synthesis** - Conversión de RTL a netlist de compuertas
+5. **Logic Verification** - Validación del netlist sintetizado
 
-### 2.2. Physical Design (Backend) / Diseño Físico
-Una vez obtenidas las compuertas lógicas, el siguiente reto es colocarlas físicamente en el área del chip.
+### 2.2. Backend: Physical Design
+
+Etapa enfocada en la implementación física del diseño en silicio.
 
 ![Physical Design Flow](Documents/ASIC_Flow/VLSI_design_flow2.png)
-*(Reference Diagram 2: Backend Flow)*
 
-Siguiendo el flujo detallado en la imagen, el proceso consta de:
+**Pasos del Backend / Backend Steps:**
 
-1.  **Partitioning & Chip Planning (Planificación):** Definición del Floorplan y pines.
-2.  **Placement (Colocación):** Ubicación óptima de las celdas estándar.
-3.  **Clock Tree Synthesis - CTS (Síntesis del Árbol de Reloj):** Distribución sincronizada del reloj.
-4.  **Signal Routing (Enrutado):** Conexión física de todas las celdas.
-5.  **Timing Closure (Cierre de Tiempos):** Verificación de *Setup* y *Hold*.
-6.  **Physical Verification (Verificación Física):** DRC, LVS y generación de GDSII para fabricación.
+1. **Floorplanning** - Planificación del área y definición de pines
+2. **Placement** - Ubicación óptima de celdas estándar
+3. **Clock Tree Synthesis (CTS)** - Construcción del árbol de distribución de reloj
+4. **Routing** - Conexión física de todas las celdas
+5. **Timing Closure** - Verificación de tiempos (setup/hold)
+6. **Physical Verification** - DRC, LVS y generación del GDSII final
 
 ---
 
-## 3. Fabrication Platform & Template / Plataforma de Fabricación y Plantilla
+## 3. Fabrication Platform / Plataforma de Fabricación
 
-Este proyecto fue diseñado específicamente para ser fabricado a través de **Tiny Tapeout**.
+### 🔧 Tiny Tapeout
 
-### Tiny Tapeout: Quicker, easier and cheaper to make your own chip!
+![Tiny Tapeout Logo](https://tinytapeout.com/tt_logo.png)
 
-**What is Tiny Tapeout? / ¿Qué es Tiny Tapeout?**
-> Tiny Tapeout is an educational project that aims to make it easier and cheaper than ever to get your digital and analog designs manufactured on a real chip.
->
-> *Tiny Tapeout es un proyecto educativo que tiene como objetivo hacer que sea más fácil y barato que nunca fabricar tus diseños digitales y analógicos en un chip real.*
+> **Tiny Tapeout** es un proyecto educativo que facilita y abarata la fabricación de diseños digitales y analógicos en chips reales.
 
-To learn more and get started, visit / Para aprender más visita: [tinytapeout.com](https://tinytapeout.com).
+> *Tiny Tapeout is an educational project that makes it easier and cheaper to manufacture digital and analog designs on real chips.*
 
-### Project Template Usage / Uso de la Plantilla del Proyecto
+🔗 **Más información:** [tinytapeout.com](https://tinytapeout.com)
 
-Para garantizar la integración correcta en el chip compartido, fue **necesario utilizar el template base oficial**. Esto asegura que el diseño cumpla con las restricciones de pines, área y configuración del entorno de Github Actions.
+### Plantilla del Proyecto / Project Template
 
-* **Base Template / Plantilla Base:** Tiny Tapeout Verilog Project Template.
-* **Project Repository / Repositorio del Proyecto:** `EstebanUnal-Hub/VLSI-UNAL`
-* **Significance / Importancia:** Esta plantilla preconfigura el entorno de **OpenLane** y las definiciones de pines necesarias para el shuttle de fabricación.
+Este proyecto utiliza la **plantilla oficial de Tiny Tapeout**, que proporciona:
+
+- Configuración preconfigurada de OpenLane
+- Restricciones de pines y área definidas
+- Integración con GitHub Actions para CI/CD
+- Compatibilidad con el shuttle de fabricación
+
+**Repositorio:** [`EstebanUnal-Hub/VLSI-UNAL`](https://github.com/EstebanUnal-Hub/VLSI-UNAL)
 
 ---
 
 ## 4. Tools & Environment / Herramientas y Entorno
 
-Para replicar este diseño, se requiere un entorno basado en Linux (Ubuntu recomendado). A continuación, se describen las herramientas utilizadas y su función específica dentro del flujo ASIC descrito en la **Sección 2**.
+### Requisitos del Sistema / System Requirements
 
-### Tool Description / Descripción de las Herramientas
+- **OS:** Ubuntu 20.04 LTS o superior
+- **RAM:** Mínimo 8GB (recomendado 16GB)
+- **Disco:** Mínimo 50GB de espacio libre
+- **Procesador:** x86_64 compatible
 
-* **OpenLane (The Orchestrator):** Es la herramienta principal que automatiza todo el flujo **RTL-to-GDSII**. OpenLane conecta y coordina todas las demás herramientas (Yosys, OpenROAD, Magic, etc.) para pasar de la Sección 2.1 a la 2.2 de forma automatizada.
-* **Icarus Verilog & GTKWave:** Pertenecen a la etapa de **Functional Verification** (Sección 2.1). Icarus compila y simula el código Verilog del FemtoRV, y GTKWave permite visualizar las ondas para depurar errores.
-* **Yosys:** Ejecuta la **Logic Synthesis** (Sección 2.1). Traduce el código Verilog legible por humanos a una lista de compuertas (Netlist) optimizada.
-* **OpenSTA:** Crítico para el **Timing Closure** (Sección 2.2). Realiza el análisis estático de tiempo para asegurar que el procesador cumpla con las frecuencias requeridas sin violaciones de *Setup* o *Hold*.
-* **Magic VLSI:** Utilizado en la **Physical Verification** (Sección 2.2). Permite visualizar el layout final (.gds) y realizar comprobaciones de reglas de diseño (DRC).
-* **Ngspice:** Simulador de circuitos a nivel transistor, útil para validaciones analógicas y caracterización.
+### Herramientas Utilizadas / Tools Used
+
+| Herramienta | Función | Etapa |
+|-------------|---------|-------|
+| **OpenLane** | Automatización del flujo RTL-to-GDSII | Frontend + Backend |
+| **Yosys** | Síntesis lógica | Frontend |
+| **Icarus Verilog** | Simulación RTL | Frontend |
+| **GTKWave** | Visualización de ondas | Frontend |
+| **OpenSTA** | Análisis estático de tiempo | Backend |
+| **Magic VLSI** | Visualización de layout y DRC | Backend |
+| **Ngspice** | Simulación SPICE | Verificación |
+| **SKY130 PDK** | Process Design Kit | Backend |
 
 ---
 
-### Installation Guide / Guía de Instalación
+## 5. Installation Guide / Guía de Instalación
 
-A continuación se detallan los comandos para configurar las herramientas en el entorno de ubunto.
+### Instalación Automática
 
-# Open Source ASIC Flow Tools Setup
+```bash
+# Clonar el repositorio
+git clone https://github.com/EstebanUnal-Hub/VLSI-UNAL.git
+cd VLSI-UNAL
 
-#### 1. Yosys
-Framework para síntesis Verilog-RTL 
+# Ejecutar script de instalación (si está disponible)
+./install_tools.sh
+```
+
+### Instalación Manual
+
+#### 5.1. Yosys
+
+Framework para síntesis Verilog-RTL.
 
 ```bash
 git clone https://github.com/YosysHQ/yosys.git
 cd yosys
-sudo apt install make
-sudo apt-get install build-essential clang bison flex     libreadline-dev gawk tcl-dev libffi-dev git     graphviz xdot pkg-config python3 libboost-system-dev     libboost-python-dev libboost-filesystem-dev zlib1g-dev
+sudo apt install make build-essential clang bison flex libreadline-dev \
+    gawk tcl-dev libffi-dev git graphviz xdot pkg-config python3 \
+    libboost-system-dev libboost-python-dev libboost-filesystem-dev zlib1g-dev
 make config-gcc
 make
 sudo make install
 ```
 
-#### 2. Icarus Verilog
-Compilador Verilog que genera netlists y soporta múltiples estándares.
+#### 5.2. Icarus Verilog
+
+Compilador Verilog que genera netlists.
 
 ```bash
-sudo apt-get install iverilog
+sudo apt install iverilog
 ```
 
-#### 3. GTKWave
+#### 5.3. GTKWave
+
 Visualizador de ondas compatible con VCD.
 
 ```bash
 sudo apt install gtkwave
 ```
 
-#### 4. ngspice
-Simulador SPICE de código abierto. simulador para circuitos electricos y electronicos, suporta JFETs, bipolar y transitores MOS< ademas de elementos pasivos como Resitencias, Inductores, codnesaldores, diodos, lienas de trasmicion entre otros equipos. Todo se internocnte en un netlist.  Los circuitos digitale son simulados desde compurtas a circuitos completos. Y la salida son una o mas graficas de corriente, voltaje, u otras senales electricas y puedes ser guardads en un archivo de datos. 
+#### 5.4. ngspice
+
+Simulador SPICE de código abierto para circuitos eléctricos y electrónicos.
 
 ```bash
-sudo apt-get install build-essential
-sudo apt-get install libxaw7-dev
-
+sudo apt install build-essential libxaw7-dev
 tar -zxvf ngspice-40.tar.gz
 cd ngspice-40
-mkdir release
-cd release
+mkdir release && cd release
 ../configure --with-x --with-readline=yes --disable-debug
 make
 sudo make install
 ```
 
-#### 5. OpenSTA
-Verificador de timing estático. puede ser usado para verificar el timming de un disenos por medio deformatos de archivos estandar como verilog netlist, Liberty library, SDC timing constraints, SDF delay annotation y SPEF parasitics.
+#### 5.5. OpenSTA
+
+Verificador de timing estático.
 
 ```bash
-sudo apt-get install cmake clang gcc tcl swig bison flex
-
+sudo apt install cmake clang gcc tcl swig bison flex
 git clone https://github.com/The-OpenROAD-Project/OpenSTA.git
 cd OpenSTA
-mkdir build
-cd build
+mkdir build && cd build
 cmake ..
 make
 sudo make install
 ```
 
-#### 6. Magic
-Herramienta de layout. Magic es una herramienta de EDA para diseño físico basado en VLSI desarrollada inicialmente en UC Berkeley.
+#### 5.6. Magic VLSI
+
+Herramienta de layout desarrollada en UC Berkeley.
 
 ```bash
-sudo apt-get install m4 tcsh csh libx11-dev tcl-dev tk-dev libcairo2-dev mesa-common-dev libglu1-mesa-dev libncurses-dev
-
+sudo apt install m4 tcsh csh libx11-dev tcl-dev tk-dev libcairo2-dev \
+    mesa-common-dev libglu1-mesa-dev libncurses-dev
 git clone https://github.com/RTimothyEdwards/magic
 cd magic
 ./configure
@@ -165,73 +213,79 @@ make
 sudo make install
 ```
 
-#### 7. OpenLane & Docker
-Flujo RTL-to-GDSII.
+#### 5.7. Docker & OpenLane
+
+Flujo completo RTL-to-GDSII.
 
 ```bash
-sudo apt-get update
-sudo apt-get upgrade
-sudo apt install -y build-essential python3 python3-venv python3-pip make git
-
+# Instalar Docker
+sudo apt update && sudo apt upgrade
+sudo apt install build-essential python3 python3-venv python3-pip make git
 sudo apt install apt-transport-https ca-certificates curl software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo "deb [arch=amd64 signed-by=/usr/share-keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+    sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+    https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list
 
 sudo apt update
 sudo apt install docker-ce docker-ce-cli containerd.io
 
+# Configurar permisos
 sudo groupadd docker
 sudo usermod -aG docker $USER
-```
 
-Instalación de OpenLane:
-
-```bash
-cd $HOME
+# Instalar OpenLane
+cd ~
 git clone https://github.com/The-OpenROAD-Project/OpenLane
 cd OpenLane
 make
 make test
 ```
 
-#### 8. PDKs
+#### 5.8. SKY130 PDK
 
-$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-INSTALL OPENPDK
-$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+Process Design Kit de SkyWater 130nm.
 
+```bash
 git clone git://opencircuitdesign.com/open_pdks
 cd open_pdks
-## configure the build, a --prefix option can be given to install
-## in a different place, by default after installation a 
-## /usr/local/share/pdk directory is created if no --prefix is provided.
-## Below line for example requests installation in my home directory
-## (/home/schippes/share/pdk):
-## ./configure --enable-sky130-pdk --prefix=/home/schippes
-## Do the following steps one at a time and ensure no errors are
-##  reported after each step.
-./configure --enable-sky130-pdk 
+./configure --enable-sky130-pdk
 make
-sudo make install 
+sudo make install
+```
 
-$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-               INSTALL XYCE
-$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+#### 5.9. Xyce (Opcional)
 
+Simulador paralelo de circuitos.
+
+```bash
 git clone https://github.com/ChipFlow/Xyce-build.git
-cd Xyce-build/
-./build.sh 
+cd Xyce-build
+./build.sh
 sudo make install prefix=/usr/local
 
+# Uso:
+# mpirun -np <# procs> Xyce [options] <netlist filename>
+```
 
-mpirun -np <# procs> Xyce [options] <netlist filename>
+---
 
+## 6. Additional Resources / Recursos Adicionales
 
+### Documentación
 
+- 📖 [RISC-V Specification](https://riscv.org/technical/specifications/)
+- 📖 [OpenLane Documentation](https://openlane.readthedocs.io/)
+- 📖 [SKY130 PDK Documentation](https://skywater-pdk.readthedocs.io/)
+- 📖 [Tiny Tapeout Guide](https://tinytapeout.com/guides/)
 
-https://pypi.org/project/riscv-model/#files
+### Comunidad
 
+- 💬 [RISC-V Forum](https://groups.google.com/a/groups.riscv.org/g/sw-dev)
+- 💬 [Tiny Tapeout Discord](https://discord.gg/tinytapeout)
+- 💬 [OpenLane Discussions](https://github.com/The-OpenROAD-Project/OpenLane/discussions)
+
+#

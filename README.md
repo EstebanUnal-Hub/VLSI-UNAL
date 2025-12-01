@@ -593,8 +593,13 @@ magic -T /home/linux/.volare/sky130A/libs.tech/magic/sky130A.tech femto.mag
 
 **Visualización del chip FemtoRV:**
 
-![Layout del chip FemtoRV en Magic](ruta/a/imagen/magic_layout.png)
+![Layout del chip FemtoRV en Magic](Documents/SPICE/spice.png)
 *Layout físico del procesador FemtoRV generado con OpenLane. Se observan las celdas estándar, interconexiones y estructura del chip.*
+
+
+
+
+
 
 #### 5.4.3. Extracción de Parásitos
 
@@ -744,8 +749,8 @@ Una vez completado el workflow:
 **Contenido de `tt_submission`:**
 ```
 tt_submission/
-├── femto.gds          # Layout final
-├── femto.lef          # Abstract view
+├── tt_um_femto.gds          # Layout final
+├── femttt_um_femto.lef          # Abstract view
 └── reports/           # Reportes de timing, área, etc.
 ```
 
@@ -768,6 +773,18 @@ ext2spice
 
 Esto genera un netlist SPICE equivalente al del flujo local, pero basado directamente en el GDSII de fabricación.
 
+A su vez tambien podemo visualizar el chip completo de tt_um_femto:
+
+![Layout del chip FemtoRV en Magic con Tiny TypeOut](Documents/SPICE/tt_um_femto.png)
+*Layout físico del procesador FemtoRV generado con Tiny TypeOut. Se observan las celdas estándar, interconexiones y estructura del chip.*
+
+Adicionalmente se pude utilziar la herramienta de viewer gds, del siguiente link: 
+https://gds-viewer.tinytapeout.com/
+
+Se obtiene la visualizacion del chip
+
+![Layout del chip FemtoRV en Magic con Tiny TypeOut](Documents/SPICE/Viewer.png)
+*Layout físico del procesador FemtoRV generado con Tiny TypeOut visto desde GDS Viewer. Se observan las celdas estándar, interconexiones y estructura del chip.*
 ---
 
 ## 6. Results & Verification / Resultados y Verificación

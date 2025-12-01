@@ -11,7 +11,7 @@ El FemtoRV es un núcleo RISC-V diseñado para ser extremadamente ligero y fáci
 El siguiente diagrama de bloques ilustra la organización interna del procesador:
 
 ![FemtoRV Block Diagram](Documents/ASIC_Flow/Bloques.png)
-*(Reemplaza esta ruta con la imagen de tu diagrama de bloques)*
+*(Diagrama de bloques de alto nivel para el procesador RV y mapping de registros)*
 
 ---
 

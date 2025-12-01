@@ -92,7 +92,7 @@ Para replicar este diseño, se requiere un entorno basado en Linux (Ubuntu recom
 
 A continuación se detallan los comandos para configurar las herramientas en el entorno de Ubuntu.
 
-# Open Source ASIC Flow Tools Setup
+
 
 #### 1. Yosys
 Framework para síntesis Verilog-RTL 
@@ -425,7 +425,7 @@ Durante la simulación se debe verificar:
 
 **Captura de simulación GTKWave:**
 
-![Simulación GTKWave del FemtoRV](ruta/a/tu_captura_gtkwave.png)
+![Simulación GTKWave del FemtoRV](Documents/SIM/GTKWAVE.png)
 *Simulación funcional del procesador FemtoRV ejecutando el firmware de calculadora. Se observan las señales de reloj, fetch de instrucciones, operaciones ALU y comunicación UART.*
 
 ---

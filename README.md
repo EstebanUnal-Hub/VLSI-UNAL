@@ -237,3 +237,207 @@ mpirun -np <# procs> Xyce [options] <netlist filename>
 - RISC-V Python Model: https://pypi.org/project/riscv-model/#files
 
 ---
+
+## 5. Implementation & Practical Flow / Implementación y Flujo Práctico
+
+Esta sección describe el flujo práctico de implementación del FemtoRV siguiendo el **ASIC Flow** descrito en la Sección 2. El proceso comienza con la verificación funcional del diseño RTL mediante simulación.
+
+### 5.1. Estructura del Proyecto
+
+El repositorio contiene la carpeta principal `femtoRV_ASIC_Flow/`, organizada de la siguiente manera:
+
+```
+femtoRV_ASIC_Flow/
+├── sim/                      # Directorio de simulación
+│   ├── cores/                # Modelos de simulación
+│   │   ├── sim_spi_flash/    # Modelo de memoria flash SPI
+│   │   └── sim_spi_ram/      # Modelo de memoria RAM SPI
+│   ├── src/                  # Código fuente RTL
+│   │   ├── femto.v           # Top level del diseño
+│   │   ├── femtorv32_quark.v # Core RISC-V
+│   │   ├── perip_uart.v      # Periférico UART
+│   │   ├── uart.v            # Módulo UART
+│   │   ├── MappedSPIFlash.v  # Interfaz SPI Flash
+│   │   └── MappedSPIRAM.v    # Interfaz SPI RAM
+│   ├── tt_um_femto_TB.v      # Testbench principal
+│   ├── firmware.hex          # Firmware compilado
+│   └── tt_um_femto_sim_verilog_2.gtkw  # Configuración GTKWave
+└── firmware/                 # Directorio de firmware
+    └── asm/                  # Código ensamblador y C
+```
+
+### 5.2. Functional Verification (Paso 3 del Frontend)
+
+Esta etapa corresponde al **paso 3** del flujo Frontend descrito en la Sección 2.1: **Verificación Funcional**. El objetivo es simular el RTL para asegurar que el procesador ejecuta las instrucciones correctamente.
+
+#### 5.2.1. Generación del Firmware
+
+Antes de simular el procesador, es necesario generar el **firmware** que será ejecutado por el FemtoRV. Este firmware se compila en formato `.hex` para ser cargado en la memoria del procesador.
+
+**Ubicación:** `femtoRV_ASIC_Flow/firmware/asm/`
+
+**Componentes del Firmware:**
+- `calculator.c` - Programa principal (calculadora)
+- `bin_to_bcd.c`, `mult.c`, `div.c` - Operaciones matemáticas
+- `putchar.c`, `getchar.c` - Funciones de I/O UART
+- `wait.c` - Funciones de temporización
+- `bram.ld` - Linker script para mapa de memoria
+
+**Toolchain Requerido:**
+```bash
+# Toolchain RISC-V de 32 bits
+export PATH="/opt/riscv32/bin:$PATH"
+
+# Verificar instalación
+command -v riscv32-unknown-elf-ld
+riscv32-unknown-elf-ld --version
+```
+
+**Proceso de Compilación:**
+
+El Makefile automatiza la compilación cruzada del firmware:
+
+```makefile
+# Variables del toolchain
+CROSS   = riscv32-unknown-elf
+CC      = $(CROSS)-gcc
+AS      = $(CROSS)-as
+LD      = $(CROSS)-ld
+OBJCOPY = $(CROSS)-objcopy
+AFLAGS  = -march=rv32i -mabi=ilp32
+```
+
+**Comandos de compilación:**
+
+```bash
+cd femtoRV_ASIC_Flow/firmware/asm/
+
+# Compilar todos los archivos .c y .S
+make
+
+# Esto genera:
+# - firmware.elf      (ejecutable linkado)
+# - firmware.bin      (binario)
+# - firmware.hex      (formato hexadecimal para simulación)
+# - firmware_flash.hex (formato para flash)
+# - firmware.lst      (listado ensamblador)
+# - firmware.map      (mapa de memoria)
+```
+
+El archivo `firmware.hex` es copiado automáticamente al directorio `sim/` para ser usado en la simulación.
+
+**Notas importantes:**
+- El linker script `bram.ld` define el mapa de memoria del procesador
+- Se utiliza la herramienta `firmware_words` para convertir el ELF a formato hex compatible
+- La compilación usa `-march=rv32i` (arquitectura RISC-V de 32 bits, set de instrucciones base)
+- Memoria RAM configurada: 16384 bytes (16 KB)
+
+#### 5.2.2. Simulación con Icarus Verilog
+
+Una vez generado el firmware, se procede con la simulación RTL usando **Icarus Verilog** (iverilog) y **GTKWave**.
+
+**Ubicación:** `femtoRV_ASIC_Flow/sim/`
+
+**Archivos de Simulación:**
+
+| Archivo | Descripción |
+|---------|-------------|
+| `tt_um_femto_TB.v` | Testbench principal que instancia el diseño completo |
+| `firmware.hex` | Firmware compilado para ejecución |
+| `tt_um_femto_sim_verilog_2.gtkw` | Configuración de visualización de ondas |
+| `cores/sim_spi_flash/spiflash.v` | Modelo de comportamiento de memoria Flash |
+| `cores/sim_spi_ram/spiram.v` | Modelo de comportamiento de memoria RAM |
+
+**Proceso de Simulación:**
+
+El Makefile automatiza el proceso completo:
+
+```bash
+cd femtoRV_ASIC_Flow/sim/
+
+# Ejecutar simulación completa
+make sim
+```
+
+**Detalles del proceso:**
+
+```makefile
+# 1. Limpiar archivos previos
+rm -f a.out *.vcd
+
+# 2. Compilar con iverilog
+iverilog -DBENCH -DSIM -DPASSTHROUGH_PLL \
+         -DBOARD_FREQ=27 -DCPU_FREQ=27 \
+         tt_um_femto_TB.v ${OBJS} ${SIM_OBJS}
+
+# 3. Ejecutar simulación con vvp
+vvp a.out
+
+# 4. Visualizar resultados con GTKWave
+gtkwave tt_um_femto_TB.vcd
+```
+
+**Macros de Compilación:**
+- `-DBENCH`: Habilita modo banco de pruebas
+- `-DSIM`: Activa características específicas de simulación
+- `-DPASSTHROUGH_PLL`: PLL en modo bypass
+- `-DBOARD_FREQ=27`: Frecuencia del board de 27 MHz
+- `-DCPU_FREQ=27`: Frecuencia de CPU de 27 MHz
+
+**Archivos RTL Incluidos:**
+```makefile
+OBJS = src/femto.v              # Top level
+OBJS+= src/femtorv32_quark.v    # Core RISC-V
+OBJS+= src/perip_uart.v         # Periférico UART
+OBJS+= src/uart.v               # Controlador UART
+OBJS+= src/MappedSPIFlash.v     # Interfaz Flash
+OBJS+= src/MappedSPIRAM.v       # Interfaz RAM
+
+SIM_OBJS = cores/sim_spi_flash/spiflash.v  # Modelo Flash
+SIM_OBJS+= cores/sim_spi_ram/spiram.v      # Modelo RAM
+```
+
+#### 5.2.3. Visualización y Análisis con GTKWave
+
+GTKWave permite visualizar las señales de simulación y verificar el comportamiento del procesador.
+
+**Cargar configuración guardada:**
+```bash
+gtkwave tt_um_femto_TB.vcd tt_um_femto_sim_verilog_2.gtkw
+```
+
+El archivo `.gtkw` contiene una configuración previa con las señales más relevantes organizadas:
+- Señales de reloj y reset
+- Bus de instrucciones y datos
+- Señales UART (TX/RX)
+- Interfaces SPI (Flash y RAM)
+- Estado interno del procesador
+
+**Verificación durante la simulación:**
+
+Durante la simulación se debe verificar:
+1. ✅ El procesador inicia correctamente tras el reset
+2. ✅ Las instrucciones se fetch desde la memoria correctamente
+3. ✅ La ALU ejecuta operaciones matemáticas
+4. ✅ La UART transmite y recibe datos
+5. ✅ Los accesos a memoria SPI funcionan correctamente
+6. ✅ El firmware se ejecuta sin bloqueos
+
+**Captura de simulación GTKWave:**
+
+![Simulación GTKWave del FemtoRV](ruta/a/tu_captura_gtkwave.png)
+*Simulación funcional del procesador FemtoRV ejecutando el firmware de calculadora. Se observan las señales de reloj, fetch de instrucciones, operaciones ALU y comunicación UART.*
+
+---
+
+### 5.3. Siguientes Pasos del Flujo
+
+Una vez completada y verificada la simulación funcional, el diseño está listo para continuar con:
+
+- **Logic Synthesis** (Paso 4 del Frontend) → Conversión del RTL a netlist
+- **Logic Verification** (Paso 5 del Frontend) → Verificación post-síntesis
+- **Physical Design** (Backend completo) → Implementación física del chip
+
+Estas etapas se describirán en las siguientes secciones del documento.
+prueba
+---

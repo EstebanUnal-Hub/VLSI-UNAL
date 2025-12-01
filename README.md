@@ -658,7 +658,7 @@ tt_submission/
 └── reports/           # Reportes de timing, área, etc.
 ```
 
-![Artefactos de GitHub Actions](ruta/a/imagen/github_artifacts.png)
+![Artefactos de GitHub Actions](Documents/SPICE/Artifacs.png)
 *Artefactos generados por GitHub Actions tras ejecutar el flujo OpenLane en Tiny Tapeout.*
 
 #### 5.5.3. Extracción SPICE desde GDS

@@ -1,0 +1,72 @@
+
+There are no discarded input sections
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+BRAM             0x00000000         0x00004000         xrw
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+
+everything      0x00000000      0x40a
+                0x00000000                        . = ALIGN (0x4)
+ calculator.o(.text)
+ .text          0x00000000       0xb4 calculator.o
+ *(.*)
+ .data          0x000000b4        0xc calculator.o
+ .bss           0x000000c0        0x0 calculator.o
+ .riscv.attributes
+                0x000000c0       0x1a calculator.o
+ *fill*         0x000000da        0x2 
+ .text          0x000000dc       0xfc bin_to_bcd.o
+                0x000000dc                bin_to_bcd
+ .data          0x000001d8        0x0 bin_to_bcd.o
+ .bss           0x000001d8        0x0 bin_to_bcd.o
+ .riscv.attributes
+                0x000001d8       0x1a bin_to_bcd.o
+ *fill*         0x000001f2        0x2 
+ .text          0x000001f4       0x78 mult.o
+                0x000001f4                mult
+                0x0000023c                mult_hw
+ .data          0x0000026c        0x0 mult.o
+ .bss           0x0000026c        0x0 mult.o
+ .riscv.attributes
+                0x0000026c       0x1a mult.o
+ *fill*         0x00000286        0x2 
+ .text          0x00000288       0x60 div.o
+                0x00000288                div
+ .data          0x000002e8        0x0 div.o
+ .bss           0x000002e8        0x0 div.o
+ .riscv.attributes
+                0x000002e8       0x1a div.o
+ *fill*         0x00000302        0x2 
+ .text          0x00000304       0x24 wait.o
+                0x00000304                wait
+ .data          0x00000328        0x0 wait.o
+ .bss           0x00000328        0x0 wait.o
+ .riscv.attributes
+                0x00000328       0x1a wait.o
+ *fill*         0x00000342        0x2 
+ .text          0x00000344       0x4c putchar.o
+                0x00000344                putchar
+ .data          0x00000390        0x0 putchar.o
+ .bss           0x00000390        0x0 putchar.o
+ .riscv.attributes
+                0x00000390       0x1a putchar.o
+ *fill*         0x000003aa        0x2 
+ .text          0x000003ac       0x44 getchar.o
+                0x000003ac                getchar
+ .data          0x000003f0        0x0 getchar.o
+ .bss           0x000003f0        0x0 getchar.o
+ .riscv.attributes
+                0x000003f0       0x1a getchar.o
+LOAD bin_to_bcd.o
+LOAD mult.o
+LOAD div.o
+LOAD wait.o
+LOAD putchar.o
+LOAD getchar.o
+LOAD calculator.o
+OUTPUT(firmware.elf elf32-littleriscv)

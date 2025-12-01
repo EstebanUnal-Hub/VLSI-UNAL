@@ -85,6 +85,7 @@ Para replicar este diseño, se requiere un entorno basado en Linux (Ubuntu recom
 * **OpenSTA:** Crítico para el **Timing Closure** (Sección 2.2). Realiza el análisis estático de tiempo para asegurar que el procesador cumpla con las frecuencias requeridas sin violaciones de *Setup* o *Hold*.
 * **Magic VLSI:** Utilizado en la **Physical Verification** (Sección 2.2). Permite visualizar el layout final (.gds) y realizar comprobaciones de reglas de diseño (DRC).
 * **Ngspice:** Simulador de circuitos a nivel transistor, útil para validaciones analógicas y caracterización.
+* **Xyce:** Simulador de circuitos paralelo de alto rendimiento desarrollado por Sandia National Laboratories, utilizado para simulaciones SPICE post-layout con capacidad de procesamiento paralelo mediante MPI.
 
 ---
 
@@ -234,6 +235,14 @@ mpirun -np <# procs> Xyce [options] <netlist filename>
 **Recursos adicionales:**
 - RISC-V Python Model: https://pypi.org/project/riscv-model/#files
 
+#### 9. PySpice y herramientas de análisis
+
+**Instalación de dependencias Python para análisis de resultados SPICE:**
+
+```bash
+pip3 install ltspice matplotlib numpy scipy
+```
+
 ---
 
 ## 5. Implementation & Practical Flow / Implementación y Flujo Práctico
@@ -260,8 +269,13 @@ femtoRV_ASIC_Flow/
 │   ├── tt_um_femto_TB.v      # Testbench principal
 │   ├── firmware.hex          # Firmware compilado
 │   └── tt_um_femto_sim_verilog_2.gtkw  # Configuración GTKWave
-└── firmware/                 # Directorio de firmware
-    └── asm/                  # Código ensamblador y C
+├── firmware/                 # Directorio de firmware
+│   └── asm/                  # Código ensamblador y C
+└── spice/                    # Directorio de simulación SPICE
+    ├── tim_to_pwl.py         # Script conversión TIM → PWL
+    ├── plot_femto.py         # Script visualización resultados
+    ├── Makefile              # Automatización simulación Xyce
+    └── femto.cir             # Testbench SPICE generado
 ```
 
 ### 5.2. Functional Verification (Paso 3 del Frontend)
@@ -607,29 +621,333 @@ El archivo `femto.spice` contiene:
 
 ---
 
-### 5.5. Conversión de Estímulos: TIM → PWL → SPICE
+### 5.5. SPICE Simulation & Analysis / Simulación y Análisis SPICE
 
-Para simular el diseño post-layout con Ngspice, es necesario convertir los estímulos exportados desde GTKWave (formato `.tim`) a formato PWL (Piecewise Linear) compatible con SPICE.
+Una vez extraído el netlist SPICE post-layout, se procede con la simulación utilizando **Xyce** (simulador paralelo de alto rendimiento) y el análisis de resultados con Python.
 
-#### 5.5.1. Script Python para Conversión
+**Ubicación:** `femtoRV_ASIC_Flow/spice/`
 
-**Crear archivo `tim_to_pwl.py`:**
-se ecunetra dentro de la carpeta femtoRV_ASIC_Flow, y luego en spice
+#### 5.5.1. Conversión de Estímulos: TIM → PWL
 
-#### 5.5.2. Uso del Script
+Para simular el diseño post-layout, es necesario convertir los estímulos exportados desde GTKWave (formato `.tim`) a formato PWL (Piecewise Linear) compatible con SPICE.
+
+**Script `tim_to_pwl.py`:**
+
+```python
+#!/usr/bin/env python3
+"""
+Convierte señales desde formato TIM (GTKWave) a formato PWL (SPICE)
+y genera un archivo .cir completo para simulación post-layout
+"""
+
+import sys
+import os
+
+def tim_to_pwl(tim_file, signal_name, vdd=1.8):
+    """
+    Convierte un archivo .tim a formato PWL
+    
+    Args:
+        tim_file: Ruta al archivo .tim de GTKWave
+        signal_name: Nombre de la señal en el netlist SPICE
+        vdd: Voltaje de alimentación (default 1.8V para sky130)
+    
+    Returns:
+        String con la descripción PWL de la señal
+    """
+    pwl_points = []
+    
+    with open(tim_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            
+            parts = line.split()
+            if len(parts) >= 2:
+                time_ns = float(parts[0])
+                value = int(parts[1])
+                voltage = vdd if value == 1 else 0.0
+                pwl_points.append(f"{time_ns}n {voltage}")
+    
+    pwl_str = f"V{signal_name} {signal_name} 0 PWL(\n"
+    pwl_str += "+ " + "\n+ ".join(pwl_points)
+    pwl_str += "\n)\n"
+    
+    return pwl_strdef generate_spice_testbench(spice_netlist, pwl_sources, output_cir):
+    """
+    Genera un archivo .cir completo combinando el netlist y los estímulos
+    
+    Args:
+        spice_netlist: Ruta al archivo femto.spice extraído
+        pwl_sources: Lista de strings con definiciones PWL
+        output_cir: Ruta del archivo .cir de salida
+    """
+    
+    with open(output_cir, 'w') as cir:
+        cir.write("* FemtoRV Post-Layout SPICE Simulation\n")
+        cir.write("* Generated from OpenLane extraction\n\n")
+        
+        # Incluir librerías del PDK
+        cir.write(".lib /home/linux/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt\n\n")
+        
+        # Incluir el netlist extraído
+        cir.write(f".include {spice_netlist}\n\n")
+        
+        # Fuentes de alimentación
+        cir.write("* Power supplies\n")
+        cir.write("VDD VDD 0 DC 1.8\n")
+        cir.write("VSS VSS 0 DC 0\n\n")
+        
+        # Fuentes PWL de estímulos
+        cir.write("* Input stimuli (PWL from GTKWave)\n")
+        for pwl in pwl_sources:
+            cir.write(pwl)
+            cir.write("\n")
+        
+        # Instanciar el diseño
+        cir.write("* DUT instantiation\n")
+        cir.write("XFEMTO CLK RESETN SPI_CLK SPI_CS_N SPI_MISO SPI_MOSI ")
+        cir.write("SPI_CLK_RAM SPI_CS_N_RAM SPI_MISO_RAM SPI_MOSI_RAM ")
+        cir.write("VDD VSS femto\n\n")
+        
+        # Configuración de simulación
+        cir.write("* Simulation commands\n")
+        cir.write(".tran 0.1n 10000n\n")
+        cir.write(".print tran v(CLK) v(RESETN) v(SPI_MISO) v(SPI_MOSI) ")
+        cir.write("v(SPI_MISO_RAM) v(SPI_MOSI_RAM)\n")
+        cir.write(".end\n")
+
+if __name__ == "__main__":
+    # Configuración
+    TIM_CLK = "clk.tim"
+    TIM_RESET = "reset.tim"
+    SPICE_NETLIST = "~/OpenLane/designs/femto/runs/full_guide/results/final/mag/femto.spice"
+    OUTPUT_CIR = "femto.cir"
+    
+    # Convertir señales
+    print("Converting TIM files to PWL...")
+    pwl_clk = tim_to_pwl(TIM_CLK, "CLK")
+    pwl_reset = tim_to_pwl(TIM_RESET, "RESETN")
+    
+    # Generar testbench completo
+    print("Generating SPICE testbench...")
+    generate_spice_testbench(
+        SPICE_NETLIST,
+        [pwl_clk, pwl_reset],
+        OUTPUT_CIR
+    )
+    
+    print(f"✅ Testbench generado: {OUTPUT_CIR}")
+    print(f"   Para simular: make xyce_tim")
+```
+
+#### 5.5.2. Configuración de Xyce para Sky130
+
+**IMPORTANTE - Modificación requerida del PDK:**
+
+Xyce no soporta el parámetro `level = 3.0` presente en algunos modelos del PDK Sky130. Es necesario comentar esta línea antes de ejecutar simulaciones:
 
 ```bash
-# Convertir archivos TIM exportados desde GTKWave
-python3 tim_to_pwl.py
+# Editar el archivo del modelo de diodo
+sudo nano /usr/local/share/pdk/sky130A/libs.ref/sky130_fd_pr/spice/sky130_fd_pr__diode_pw2nd_05v5.model.spice
+
+# Comentar la línea:
+*+ level = 3.0
 ```
+
+#### 5.5.3. Automatización con Makefile
+
+**Archivo `Makefile` en `femtoRV_ASIC_Flow/spice/`:**
+
+```makefile
+########################################################################################################
+##########     !!!!  IMPORTANTE     !!!!!                                                          #####
+#             XYCE NO SOPORTA LEVEL 3                                                              #####
+# Se debe modificar el archivo:                                                                       #
+# /usr/local/share/pdk/sky130A/libs.ref/sky130_fd_pr/spice/sky130_fd_pr__diode_pw2nd_05v5.model.spice #
+# colocando un comentario en la línea:                                                                #
+# *+ level = 3.0                                                                                      #
+########################################################################################################
+
+TARGET=femto
+TOP=femto
+NPROC=4
+
+all: xyce_tim
+
+xyce_tim:
+	mpirun -np ${NPROC} Xyce ${TARGET}.cir
+
+clean:
+	rm -rf *.out *.vcd *.svg *.json *.raw *.cir
+```
+
+**Ejecutar simulación:**
+
+```bash
+cd femtoRV_ASIC_Flow/spice/
+
+# Generar archivo .cir con estímulos PWL
+python3 tim_to_pwl.py
+
+# Ejecutar simulación paralela con Xyce (4 procesadores)
+make xyce_tim
+```
+
+**Salida esperada:**
+
+Xyce genera un archivo `femto_cir.raw` que contiene los resultados de la simulación en formato binario, compatible con herramientas de análisis como PySpice.
+
+#### 5.5.4. Visualización de Resultados con Python
+
+**Script `plot_femto.py`:**
+
+```python
+#!/usr/bin/env python3
+"""
+Visualización de resultados de simulación SPICE post-layout
+Genera gráficas de señales SPI (Flash y RAM) y contador de programa
+"""
+
+import ltspice
+import matplotlib
+matplotlib.use("TkAgg")  # o "Qt5Agg" si tienes Qt
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+
+# Cargar archivo de resultados
+filepath = 'femto_cir.raw'
+l = ltspice.Ltspice(filepath)
+l.parse()  # Carga de datos. Puede tomar algunos minutos para archivos grandes
+
+print("Variables disponibles en el archivo:")
+print(l.variables)
+
+# Extraer señales
+time = l.get_time()
+V_CLK = l.get_data('V(CLK)')
+V_RESETN = l.get_data('V(RESETN)')
+V_SPI_CLK = l.get_data('V(SPI_CLK)')
+V_SPI_CS_N = l.get_data('V(SPI_CS_N)')
+V_SPI_MISO = l.get_data('V(SPI_MISO)')
+V_SPI_MOSI = l.get_data('V(SPI_MOSI)')
+V_SPI_CLK_RAM = l.get_data('V(SPI_CLK_RAM)')
+V_SPI_CS_N_RAM = l.get_data('V(SPI_CS_N_RAM)')
+V_SPI_MISO_RAM = l.get_data('V(SPI_MISO_RAM)')
+V_SPI_MOSI_RAM = l.get_data('V(SPI_MOSI_RAM)')
+
+signals = [V_CLK, V_RESETN, V_SPI_CLK, V_SPI_CS_N, V_SPI_MISO, V_SPI_MOSI, 
+           V_SPI_CLK_RAM, V_SPI_CS_N_RAM, V_SPI_MISO_RAM, V_SPI_MOSI_RAM]
+sig_names = ["CLK", "RESETN", "SPI_CLK", "SPI_CS_N", "SPI_MISO", "SPI_MOSI", 
+             "SPI_CLK_RAM", "SPI_CS_N_RAM", "SPI_MISO_RAM", "SPI_MOSI_RAM"]
+
+# ============================================================================
+# GRÁFICA 1: Señales apiladas (subplots)
+# ============================================================================
+fig1, axes = plt.subplots(len(signals), 1, figsize=(14, 12), sharex=True)
+
+for i, (ax, sig, name) in enumerate(zip(axes, signals, sig_names)):
+    ax.plot(time * 1e9, sig, color=plt.cm.viridis(i/len(signals)), linewidth=1)
+    ax.set_ylabel(name, rotation=0, ha='right', va='center', fontsize=9)
+    ax.grid(alpha=0.3, linestyle='--')
+    ax.set_ylim(-0.2, 2.0)
+
+axes[-1].set_xlabel('Time (ns)', fontsize=10)
+plt.suptitle('FemtoRV Post-Layout Simulation - All Signals', y=0.995, fontsize=12)
+plt.tight_layout()
+plt.savefig('femto_signals_stacked.png', dpi=300, bbox_inches='tight')
+print("✅ Gráfica guardada: femto_signals_stacked.png")
+plt.show()
+
+# ============================================================================
+# GRÁFICA 2: Señales SPI Flash (MOSI y MISO)
+# ============================================================================
+fig2, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+
+# SPI Flash
+ax1.plot(time * 1e9, V_SPI_CLK, label='SPI_CLK', alpha=0.7)
+ax1.plot(time * 1e9, V_SPI_CS_N, label='SPI_CS_N', alpha=0.7)
+ax1.plot(time * 1e9, V_SPI_MOSI, label='SPI_MOSI', linewidth=1.5)
+ax1.plot(time * 1e9, V_SPI_MISO, label='SPI_MISO', linewidth=1.5)
+ax1.set_ylabel('Voltage (V)')
+ax1.set_title('SPI Flash Interface')
+ax1.legend(loc='upper right')
+ax1.grid(alpha=0.3)
+
+# SPI RAM
+ax2.plot(time * 1e9, V_SPI_CLK_RAM, label='SPI_CLK_RAM', alpha=0.7)
+ax2.plot(time * 1e9, V_SPI_CS_N_RAM, label='SPI_CS_N_RAM', alpha=0.7)
+ax2.plot(time * 1e9, V_SPI_MOSI_RAM, label='SPI_MOSI_RAM', linewidth=1.5)
+ax2.plot(time * 1e9, V_SPI_MISO_RAM, label='SPI_MISO_RAM', linewidth=1.5)
+ax2.set_xlabel('Time (ns)')
+ax2.set_ylabel('Voltage (V)')
+ax2.set_title('SPI RAM Interface')
+ax2.legend(loc='upper right')
+ax2.grid(alpha=0.3)
+
+plt.tight_layout()
+plt.savefig('femto_spi_interfaces.png', dpi=300, bbox_inches='tight')
+print("✅ Gráfica guardada: femto_spi_interfaces.png")
+plt.show()
+
+# ============================================================================
+# GRÁFICA 3: Comparación MOSI/MISO (Flash vs RAM)
+# ============================================================================
+fig3, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+
+# MOSI comparison
+ax1.plot(time * 1e9, V_SPI_MOSI, label='Flash MOSI', linewidth=1.5, alpha=0.8)
+ax1.plot(time * 1e9, V_SPI_MOSI_RAM, label='RAM MOSI', linewidth=1.5, alpha=0.8)
+ax1.set_ylabel('Voltage (V)')
+ax1.set_title('MOSI Signals Comparison (Master Out Slave In)')
+ax1.legend(loc='upper right')
+ax1.grid(alpha=0.3)
+
+# MISO comparison
+ax2.plot(time * 1e9, V_SPI_MISO, label='Flash MISO', linewidth=1.5, alpha=0.8)
+ax2.plot(time * 1e9, V_SPI_MISO_RAM, label='RAM MISO', linewidth=1.5, alpha=0.8)
+ax2.set_xlabel('Time (ns)')
+ax2.set_ylabel('Voltage (V)')
+ax2.set_title('MISO Signals Comparison (Master In Slave Out)')
+ax2.legend(loc='upper right')
+ax2.grid(alpha=0.3)
+
+plt.tight_layout()
+plt.savefig('femto_mosi_miso_comparison.png', dpi=300, bbox_inches='tight')
+print("✅ Gráfica guardada: femto_mosi_miso_comparison.png")
+plt.show()
+
+print("\n=== Análisis completado ===")
+print("Se generaron 3 gráficas:")
+print("  1. femto_signals_stacked.png - Todas las señales apiladas")
+print("  2. femto_spi_interfaces.png - Interfaces SPI Flash y RAM")
+print("  3. femto_mosi_miso_comparison.png - Comparación MOSI/MISO")
+```
+
+**Ejecutar análisis:**
+
+```bash
+python3 plot_femto.py
+```
+
+**Gráficas generadas:**
+
+![Señales SPI Flash y RAM](ruta/a/imagen/femto_spi_interfaces.png)
+*Interfaces SPI del procesador FemtoRV. Se observan las señales MOSI (Master Out Slave In) y MISO (Master In Slave Out) para memoria Flash y RAM.*
+
+![Comparación MOSI/MISO](ruta/a/imagen/femto_mosi_miso_comparison.png)
+*Comparación de señales MOSI y MISO entre las interfaces de Flash y RAM. Permite verificar la correcta comunicación del procesador con las memorias externas.*
 
 **Análisis de resultados:**
 
 Los resultados pueden visualizarse para verificar:
-- Propagación de señales a través del chip real
-- Delays introducidos por las capacitancias parásitas
-- Efectos de carga en las salidas
-- Consumo de corriente del circuito
+- Propagación de señales a través del chip real con parásitos
+- Delays introducidos por las capacitancias e interconexiones
+- Efectos de carga en las salidas SPI
+- Integridad de señales en comunicación con memorias externas
+- Consumo de corriente del circuito post-layout
 
 ---
 
@@ -704,8 +1022,9 @@ Tras completar el flujo RTL-to-GDSII, OpenLane genera reportes detallados sobre 
 ✅ **Physical Implementation:** GDSII generado  
 ✅ **DRC:** Sin violaciones de reglas de diseño  
 ✅ **LVS:** Layout coincide con netlist  
-✅ **Post-Layout Extraction:** SPICE netlist extraído  
-✅ **SPICE Simulation:** [Pendiente/Completado]
+✅ **Post-Layout Extraction:** SPICE netlist extraído con parásitos  
+✅ **SPICE Simulation:** Simulación post-layout con Xyce completada  
+✅ **Signal Integrity Analysis:** Verificación de integridad de señales SPI
 
 ---
 
@@ -713,7 +1032,8 @@ Tras completar el flujo RTL-to-GDSII, OpenLane genera reportes detallados sobre 
 
 - [ ] Optimización de frecuencia de reloj
 - [ ] Simulaciones de corner cases (tt, ff, ss)
-- [ ] Análisis de consumo de potencia
+- [ ] Análisis de consumo de potencia (Power Analysis)
+- [ ] Caracterización de delays con temperatura
 - [ ] Preparación para tapeout final
 
 ---
@@ -725,6 +1045,8 @@ Tras completar el flujo RTL-to-GDSII, OpenLane genera reportes detallados sobre 
 - [OpenLane Documentation](https://openlane.readthedocs.io)
 - [SkyWater PDK Documentation](https://skywater-pdk.readthedocs.io)
 - [Magic VLSI Layout Tool](http://opencircuitdesign.com/magic/)
+- [Xyce Parallel Electronic Simulator](https://xyce.sandia.gov/)
+- [PySpice Documentation](https://pypi.org/project/ltspice/)
 
 ---
 

@@ -1,0 +1,29 @@
+[*]
+[*] GTKWave Analyzer v3.3.116 (w)1999-2023 BSI
+[*] Mon Dec  1 13:29:03 2025
+[*]
+[dumpfile] "/home/linux/Documents/Embedded/Development/VLSI-UNAL/mult_ASM/simulation/mult_32_TB.vcd"
+[dumpfile_mtime] "Mon Dec  1 13:23:02 2025"
+[dumpfile_size] 3835
+[savefile] "/home/linux/Documents/Embedded/Development/VLSI-UNAL/mult_ASM/simulation/mult_4.gtkw"
+[timestart] 0
+[size] 1000 533
+[pos] -1 -1
+*-18.000000 437000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] mult_32_TB.
+[sst_width] 278
+[signals_width] 86
+[sst_expanded] 1
+[sst_vpaned_height] 134
+@22
+mult_32_TB.uut.A[3:0]
+mult_32_TB.uut.B[3:0]
+@28
+mult_32_TB.uut.clk
+mult_32_TB.uut.done
+mult_32_TB.uut.init
+mult_32_TB.uut.rst
+@22
+mult_32_TB.uut.pp[7:0]
+[pattern_trace] 1
+[pattern_trace] 0

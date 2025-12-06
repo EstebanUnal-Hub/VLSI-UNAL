@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 `define SIMULATION
-module mult_32_TB;
+module mult_4_TB;
    reg  clk;
    reg  rst;
    reg  reset;
@@ -9,7 +9,7 @@ module mult_32_TB;
    reg  [3:0]B;
    wire [7:0] pp;
    wire done;
-   mult_32 uut (.clk(clk) , .rst(rst) , .init(start) , .A(A) , .B(B) , .pp(pp) , .done(done));
+   mult_4 uut (.clk(clk) , .rst(rst) , .init(start) , .A(A) , .B(B) , .pp(pp) , .done(done));
    parameter PERIOD          = 20;
    parameter real DUTY_CYCLE = 0.5;
    parameter OFFSET          = 0;
@@ -28,7 +28,7 @@ module mult_32_TB;
 		end
 	end
    initial begin  // Initialize Inputs
-      clk = 0; rst = 1; start = 0; A = 16'h0003; B = 16'h0005;
+      clk = 0; rst = 1; start = 0; A = 16'hF; B = 16'hF;
    end
    initial  begin  // Process for clk
      #OFFSET;
@@ -55,7 +55,7 @@ module mult_32_TB;
        end
    end	 
    initial begin: TEST_CASE
-     $dumpfile("mult_32_TB.vcd");
+     $dumpfile("mult_4_TB.vcd");
      $dumpvars(-1, uut);
      #((PERIOD*DUTY_CYCLE)*120) $finish;
    end

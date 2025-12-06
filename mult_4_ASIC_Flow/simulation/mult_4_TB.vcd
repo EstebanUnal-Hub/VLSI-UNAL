@@ -1,0 +1,456 @@
+$date
+	Sat Dec  6 13:18:32 2025
+$end
+$version
+	Icarus Verilog
+$end
+$timescale
+	1ps
+$end
+$scope module mult_4_TB $end
+$scope module uut $end
+$var wire 4 ! A [3:0] $end
+$var wire 4 " B [3:0] $end
+$var wire 1 # clk $end
+$var wire 1 $ init $end
+$var wire 1 % rst $end
+$var wire 1 & w_z $end
+$var wire 1 ' w_sh $end
+$var wire 1 ( w_reset $end
+$var wire 1 ) w_add $end
+$var wire 8 * w_B [7:0] $end
+$var wire 8 + w_A [7:0] $end
+$var wire 8 , pp [7:0] $end
+$var wire 1 - done $end
+$scope module acc0 $end
+$var wire 1 # clk $end
+$var wire 1 ( rst $end
+$var wire 1 ) add $end
+$var wire 8 . A [7:0] $end
+$var reg 8 / pp [7:0] $end
+$upscope $end
+$scope module comp0 $end
+$var wire 1 & z $end
+$var wire 8 0 B [7:0] $end
+$var reg 1 1 tmp $end
+$upscope $end
+$scope module control0 $end
+$var wire 1 # clk $end
+$var wire 1 $ init $end
+$var wire 1 2 lsb_B $end
+$var wire 1 % rst $end
+$var wire 1 & z $end
+$var parameter 3 3 ADD $end
+$var parameter 3 4 CHECK $end
+$var parameter 3 5 END $end
+$var parameter 3 6 SHIFT $end
+$var parameter 3 7 START $end
+$var reg 1 ) add $end
+$var reg 4 8 count [3:0] $end
+$var reg 1 - done $end
+$var reg 1 ( reset $end
+$var reg 1 ' sh $end
+$var reg 3 9 state [2:0] $end
+$upscope $end
+$scope module lsr0 $end
+$var wire 1 # clk $end
+$var wire 4 : in_A [3:0] $end
+$var wire 1 ( load $end
+$var wire 1 ' shift $end
+$var reg 8 ; s_A [7:0] $end
+$upscope $end
+$scope module rsr0 $end
+$var wire 1 # clk $end
+$var wire 4 < in_B [3:0] $end
+$var wire 1 ( load $end
+$var wire 1 ' shift $end
+$var reg 8 = s_B [7:0] $end
+$upscope $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+$comment Show the parameter values. $end
+$dumpall
+b0 7
+b10 6
+b100 5
+b1 4
+b11 3
+$end
+#0
+$dumpvars
+bx =
+b1111 <
+bx ;
+b1111 :
+b0 9
+bx 8
+x2
+01
+bx 0
+b0 /
+bx .
+0-
+b0 ,
+bx +
+bx *
+0)
+0(
+0'
+0&
+1%
+0$
+0#
+b1111 "
+b1111 !
+$end
+#10000
+1#
+#20000
+0#
+#30000
+1#
+#40000
+0%
+0#
+#50000
+b0 8
+1(
+1#
+#60000
+12
+b1111 +
+b1111 .
+b1111 ;
+b1111 *
+b1111 0
+b1111 =
+0#
+#70000
+1$
+1#
+#80000
+0#
+#90000
+b1 9
+1#
+#100000
+0#
+#110000
+0$
+b11 9
+0(
+1#
+#120000
+0#
+#130000
+b10 9
+1)
+1#
+#140000
+b1111 ,
+b1111 /
+0#
+#150000
+b1 9
+0)
+1'
+1#
+#160000
+b111 *
+b111 0
+b111 =
+b11110 +
+b11110 .
+b11110 ;
+0#
+#170000
+b11 9
+0'
+1#
+#180000
+0#
+#190000
+b10 9
+1)
+1#
+#200000
+b101101 ,
+b101101 /
+0#
+#210000
+b1 9
+0)
+1'
+1#
+#220000
+b111100 +
+b111100 .
+b111100 ;
+b11 *
+b11 0
+b11 =
+0#
+#230000
+b11 9
+0'
+1#
+#240000
+0#
+#250000
+b10 9
+1)
+1#
+#260000
+b1101001 ,
+b1101001 /
+0#
+#270000
+b1 9
+0)
+1'
+1#
+#280000
+b1 *
+b1 0
+b1 =
+b1111000 +
+b1111000 .
+b1111000 ;
+0#
+#290000
+b11 9
+0'
+1#
+#300000
+0#
+#310000
+b10 9
+1)
+1#
+#320000
+b11100001 ,
+b11100001 /
+0#
+#330000
+b1 9
+0)
+1'
+1#
+#340000
+02
+1&
+11
+b11110000 +
+b11110000 .
+b11110000 ;
+b0 *
+b0 0
+b0 =
+0#
+#350000
+b10 9
+0'
+1#
+#360000
+0#
+#370000
+b100 9
+1'
+1#
+#380000
+b11100000 +
+b11100000 .
+b11100000 ;
+0#
+#390000
+b1 8
+0'
+1-
+1#
+#400000
+0#
+#410000
+b10 8
+1#
+#420000
+0#
+#430000
+b11 8
+1#
+#440000
+0#
+#450000
+b100 8
+1#
+#460000
+0#
+#470000
+b101 8
+1#
+#480000
+0#
+#490000
+b110 8
+1#
+#500000
+0#
+#510000
+b111 8
+1#
+#520000
+0#
+#530000
+b1000 8
+1#
+#540000
+0#
+#550000
+b1001 8
+1#
+#560000
+0#
+#570000
+b0 9
+b1010 8
+1#
+#580000
+0#
+#590000
+b0 8
+1(
+0-
+1#
+#600000
+12
+0&
+01
+b1111 *
+b1111 0
+b1111 =
+b1111 +
+b1111 .
+b1111 ;
+b0 ,
+b0 /
+0#
+#610000
+1#
+#620000
+0#
+#630000
+1#
+#640000
+0#
+#650000
+1#
+#660000
+0#
+#670000
+1#
+#680000
+0#
+#690000
+1#
+#700000
+0#
+#710000
+1#
+#720000
+0#
+#730000
+1#
+#740000
+0#
+#750000
+1#
+#760000
+0#
+#770000
+1#
+#780000
+0#
+#790000
+1#
+#800000
+0#
+#810000
+1#
+#820000
+0#
+#830000
+1#
+#840000
+0#
+#850000
+1#
+#860000
+0#
+#870000
+1#
+#880000
+0#
+#890000
+1#
+#900000
+0#
+#910000
+1#
+#920000
+0#
+#930000
+1#
+#940000
+0#
+#950000
+1#
+#960000
+0#
+#970000
+1#
+#980000
+0#
+#990000
+1#
+#1000000
+0#
+#1010000
+1#
+#1020000
+0#
+#1030000
+1#
+#1040000
+0#
+#1050000
+1#
+#1060000
+0#
+#1070000
+1#
+#1080000
+0#
+#1090000
+1#
+#1100000
+0#
+#1110000
+1#
+#1120000
+0#
+#1130000
+1#
+#1140000
+0#
+#1150000
+1#
+#1160000
+0#
+#1170000
+1#
+#1180000
+0#
+#1190000
+1#
+#1200000
+0#

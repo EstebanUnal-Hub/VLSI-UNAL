@@ -1,4 +1,4 @@
-module mult_32(clk , rst , init , A , B , pp , done);
+module mult_4(clk , rst , init , A , B , pp , done);
   
   input rst;
   input clk;
@@ -13,7 +13,7 @@ module mult_32(clk , rst , init , A , B , pp , done);
   wire w_add;
   wire w_z;
   
-  wire [15:0] w_A;
+  wire [7:0] w_A;
   wire [7:0] w_B;
   
  

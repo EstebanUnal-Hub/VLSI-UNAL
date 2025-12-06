@@ -1,5 +1,5 @@
 module comp(B, z);
-  input [15:0]B;
+  input [7:0]B;
   output z;
   reg tmp;
   

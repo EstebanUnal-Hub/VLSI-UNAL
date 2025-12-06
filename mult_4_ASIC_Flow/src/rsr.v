@@ -1,9 +1,9 @@
 module rsr (clk, in_B , shift , load , s_B);
   input clk;
-  input [15:0]in_B;
+  input [3:0]in_B;
   input load;
   input shift;
-  output reg [15:0]s_B;
+  output reg [7:0]s_B;
 
 always @(negedge clk)
   if(load)

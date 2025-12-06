@@ -3,9 +3,9 @@ module mult_32(clk , rst , init , A , B , pp , done);
   input rst;
   input clk;
   input init;
-  input [15:0] A;
-  input [15:0] B;
-  output [31:0] pp;
+  input [3:0] A;
+  input [3:0] B;
+  output [7:0] pp;
   output done;
 
   wire w_sh;
@@ -13,8 +13,8 @@ module mult_32(clk , rst , init , A , B , pp , done);
   wire w_add;
   wire w_z;
   
-  wire [31:0] w_A;
-  wire [15:0] w_B;
+  wire [15:0] w_A;
+  wire [7:0] w_B;
   
  
   rsr rsr0 (.clk(clk), .in_B(B) , .shift(w_sh) , .load(w_reset) , .s_B(w_B));

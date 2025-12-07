@@ -28,7 +28,7 @@ module mult_4_TB;
 		end
 	end
    initial begin  // Initialize Inputs
-      clk = 0; rst = 1; start = 0; A = 16'hF; B = 16'hF;
+      clk = 0; rst = 1; start = 0; A = 16'h5; B = 16'hD;
    end
    initial  begin  // Process for clk
      #OFFSET;

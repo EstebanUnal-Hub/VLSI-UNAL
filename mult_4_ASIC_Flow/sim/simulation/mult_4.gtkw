@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.116 (w)1999-2023 BSI
-[*] Sat Dec  6 18:15:26 2025
+[*] Sun Dec  7 18:16:11 2025
 [*]
-[dumpfile] "/home/linux/Documents/Embedded/Development/VLSI-UNAL/mult_4_ASIC_Flow/simulation/mult_4_TB.vcd"
-[dumpfile_mtime] "Sat Dec  6 18:14:02 2025"
-[dumpfile_size] 3753
-[savefile] "/home/linux/Documents/Embedded/Development/VLSI-UNAL/mult_4_ASIC_Flow/simulation/mult_4.gtkw"
+[dumpfile] "/home/linux/Documents/Embedded/Development/VLSI-UNAL/mult_4_ASIC_Flow/sim/simulation/mult_4_TB.vcd"
+[dumpfile_mtime] "Sun Dec  7 18:15:01 2025"
+[dumpfile_size] 3762
+[savefile] "/home/linux/Documents/Embedded/Development/VLSI-UNAL/mult_4_ASIC_Flow/sim/simulation/mult_4.gtkw"
 [timestart] 10000
 [size] 1000 600
 [pos] -1 -1
-*-18.000000 373000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-18.000000 41000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] mult_4_TB.
 [sst_width] 278
 [signals_width] 86
@@ -21,9 +21,10 @@ mult_4_TB.uut.clk
 mult_4_TB.uut.A[3:0]
 mult_4_TB.uut.B[3:0]
 @28
+mult_4_TB.uut.rst
 mult_4_TB.uut.init
 mult_4_TB.uut.done
-@23
+@22
 mult_4_TB.uut.pp[7:0]
 [pattern_trace] 1
 [pattern_trace] 0

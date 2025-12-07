@@ -1,0 +1,9 @@
+
+Note: No compatibility mode selected!
+
+
+Circuit: * spice netlist generated from tt_um_mult_4.ext
+
+Error: unknown subckt: x0 vpwr vgnd vpwr vpwr sky130_fd_pr__pfet_01v8_hvt ad=0.2262 pd=2.26 as=645.33118 ps=6.3379k w=0.87 l=1.97
+    Simulation interrupted due to error!
+

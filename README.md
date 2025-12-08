@@ -1,17 +1,50 @@
 # FemtoRV Physical Implementation: ASIC Flow / Implementación Física de FemtoRV
 
-Este repositorio documenta el proceso completo de diseño, síntesis e implementación física (RTL-to-GDSII) del núcleo **FemtoRV**, un procesador basado en la arquitectura RISC-V. El objetivo de este proyecto es llevar una descripción de hardware (HDL) hasta un layout listo para fabricación. Además, se utiliza **Tiny Tapeout** con el fin de realizar la fabricación del chip.
+Este repositorio documenta el proceso completo de diseño, síntesis e implementación física (RTL-to-GDS) del núcleo **FemtoRV**, un procesador basado en la arquitectura RISC-V. El objetivo de este proyecto es llevar una descripción de hardware (HDL) hasta un layout listo para fabricación. Además, se utiliza **Tiny Tapeout** con el fin de realizar la fabricación del chip.
 
 ---
 
 ## 1. Processor Architecture / Arquitectura del Procesador (FemtoRV)
 
-El FemtoRV es un núcleo RISC-V diseñado para ser extremadamente ligero y fácil de entender. Antes de iniciar el flujo físico, es crucial entender la microarquitectura que estamos implementando.
+El FemtoRV es un núcleo RISC-V diseñado para ser extremadamente ligero y fácil de entender. Antes de iniciar el flujo físico, es crucial entender la microarquitectura que estamos implementando y la interconexión con las memorias y periféricos.
 
-El siguiente diagrama de bloques ilustra la organización interna del procesador:
+| Puerto         | Dirección | Ancho | Descripción                                      |
+| :---           | :---      | :---: | :---                                             |
+| clk          | Entrada   | 1     | Reloj del sistema.                               |
+| resetn       | Entrada   | 1     | Reset activo en bajo.                            |
+| spi_mosi     | Salida    | 1     | SPI Flash: Master Out Slave In.                  |
+| spi_miso     | Entrada   | 1     | SPI Flash: Master In Slave Out.                  |
+| spi_cs_n     | Salida    | 1     | SPI Flash: Chip Select (Activo bajo).            |
+| spi_clk      | Salida    | 1     | SPI Flash: Clock.                                |
+| spi_clk_ram  | Salida    | 1     | SPI RAM: Clock.                                  |
+| spi_cs_n_ram | Salida    | 1     | SPI RAM: Chip Select (Activo bajo).              |
+| spi_miso_ram | Entrada   | 1     | SPI RAM: Master In Slave Out.                    |
+| spi_mosi_ram | Salida    | 1     | SPI RAM: Master Out Slave In.                    |
+| LEDS         | Salida    | 1     | Salida para LED de estado del sistema.           |
+| RXD          | Entrada   | 1     | UART: Recepción de datos (Serial In).            |
+| TXD          | Salida    | 1     | UART: Transmisión de datos (Serial Out).         |
 
-![FemtoRV Block Diagram](Documents/ASIC_Flow/Bloques.png)
-*(Diagrama de bloques de alto nivel para el procesador RV y mapping de registros)*
+
+Mapeo de las señales internas a los pines estandarizados del proyecto Tiny Tapeout 08.
+
+| Pin TinyTapeout | Dirección | Señal Interna (femto.v) | Descripción / Función         |
+| :---            | :---      | :---                      | :---                          |
+| ui_in[0]      | Entrada   | spi_miso                | SPI Flash MISO                |
+| ui_in[1]      | Entrada   | spi_miso_ram            | SPI RAM MISO                  |
+| ui_in[2]      | Entrada   | RXD                     | UART RX (Recepción)           |
+| ui_in[7:3]    | Entrada   | N/A                       | No conectados / Reservados |
+| uo_out[0]     | Salida    | spi_mosi                | SPI Flash MOSI                |
+| uo_out[1]     | Salida    | spi_mosi_ram            | SPI RAM MOSI                  |
+| uo_out[2]     | Salida    | spi_cs_n                | SPI Flash Chip Select         |
+| uo_out[3]     | Salida    | spi_cs_n_ram            | SPI RAM Chip Select           |
+| uo_out[4]     | Salida    | spi_clk_ram             | SPI RAM Clock                 |
+| uo_out[5]     | Salida    | spi_clk                 | SPI Flash Clock               |
+| uo_out[6]     | Salida    | LEDS                    | LEDs de usuario               |
+| uo_out[7]     | Salida    | TXD                     | UART TX (Transmisión)         |
+| uio_out[7:0]  | Bidir     | N/A                       | No conectados / Reservados |
+| clk           | Entrada   | clk                     | Reloj global                  |
+| rst_n         | Entrada   | resetn                  | Reset global (Activo bajo)    |
+| ena           | Entrada   | N/A                       | Enable (Siempre 1)            |
 
 ---
 
@@ -449,7 +482,7 @@ Una vez verificado el comportamiento funcional del diseño, es necesario exporta
 Desde GTKWave, seleccionar las señales relevantes (clk, reset, señales de entrada/salida) y exportarlas:
 
 ```
-File → Export → Write TIM File  As 
+File → Export → Write TIM File As 
 ```
 
 Esto genera un archivo de texto con los valores de las señales en función del tiempo, compatible para conversión a formato PWL (Piecewise Linear) utilizado en SPICE.
@@ -651,7 +684,6 @@ Una vez completado el workflow:
 tt_submission/
 ├── tt_um_femto.gds          # Layout final
 ├── femttt_um_femto.lef          # Abstract view
-└── reports/           # Reportes de timing, área, etc.
 ```
 
 ![Artefactos de GitHub Actions](Documents/SPICE/Artifacs.png)
@@ -715,7 +747,7 @@ Tras descargar los artefactos generados, se procedió a cargar el layout en **Ma
 **Layout físico del multiplicador de 4 bits:**
 
 ![Layout del Multiplicador de 4 bits](Documents/Mult_4/Magis.png)  
-*Layout del Multiplicador de 4 bits realizado con Magic VLSI. Se utilizaron comandos de extracción para generar el archivo `.spice` con parásitos.*
+*Layout del Multiplicador de 4 bits realizado con Magic VLSI. Se utilizaron comandos de extracción para generar el archivo `.spice`.*
 
 **Proceso de extracción en Magic:**
 
@@ -730,6 +762,9 @@ extract all
 ext2spice lvs
 ext2spice cthresh infinite
 ext2spice rthresh infinite
+ext2spice subcircuits off
+ext2spice hierarchy off
+ext2spice scale off
 ext2spice
 ```
 
@@ -890,7 +925,7 @@ Esta gráfica confirma que:
 
 En esta gráfica se observa:
 - La evolución temporal de la señal de salida PP
-- Al finalizar el tiempo de ejecución (señal `Done`), el valor de PP es **65** (decimal)
+- Al finalizar el tiempo de ejecución (y la activación del `Done`), el valor de PP es **65** (decimal)
 - La estabilidad de la señal de salida tras la computación
 
 ---
@@ -928,13 +963,8 @@ Estos resultados validan que el diseño del multiplicador de 4 bits está listo 
 - [Pagina Ngspice](https://ngspice.sourceforge.io/)
 - [Github OpenPDK](https://github.com/RTimothyEdwards/open_pdks)
 
----
-
-## License / Licencia
-
-Este proyecto se distribuye bajo [especificar licencia].
 
 ---
 
-**Maintainers:** [Tu nombre/equipo]  
-**Contact:** [email de contacto]
+**Maintainers:** [Manuel Esteban Peña Choachi]  
+**Contact:** [mpenach@unal.edu.co]

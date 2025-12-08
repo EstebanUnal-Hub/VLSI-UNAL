@@ -80,7 +80,7 @@ if CLK is not None:
     sig_names_in.append('CLK')
 
 # rst
-if CLK is not None:
+if RST_N is not None:
     signals.append(RST_N)
     sig_names.append('RST')
 

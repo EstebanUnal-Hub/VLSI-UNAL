@@ -8,21 +8,21 @@ Este repositorio documenta el proceso completo de diseño, síntesis e implement
 
 El FemtoRV es un núcleo RISC-V diseñado para ser extremadamente ligero y fácil de entender. Antes de iniciar el flujo físico, es crucial entender la microarquitectura que estamos implementando y la interconexión con las memorias y periféricos.
 
-| Puerto         | Dirección | Ancho | Descripción                                      |
-| :---           | :---      | :---: | :---                                             |
-| clk          | Entrada   | 1     | Reloj del sistema.                               |
-| resetn       | Entrada   | 1     | Reset activo en bajo.                            |
-| spi_mosi     | Salida    | 1     | SPI Flash: Master Out Slave In.                  |
-| spi_miso     | Entrada   | 1     | SPI Flash: Master In Slave Out.                  |
-| spi_cs_n     | Salida    | 1     | SPI Flash: Chip Select (Activo bajo).            |
-| spi_clk      | Salida    | 1     | SPI Flash: Clock.                                |
-| spi_clk_ram  | Salida    | 1     | SPI RAM: Clock.                                  |
-| spi_cs_n_ram | Salida    | 1     | SPI RAM: Chip Select (Activo bajo).              |
-| spi_miso_ram | Entrada   | 1     | SPI RAM: Master In Slave Out.                    |
-| spi_mosi_ram | Salida    | 1     | SPI RAM: Master Out Slave In.                    |
-| LEDS         | Salida    | 1     | Salida para LED de estado del sistema.           |
-| RXD          | Entrada   | 1     | UART: Recepción de datos (Serial In).            |
-| TXD          | Salida    | 1     | UART: Transmisión de datos (Serial Out).         |
+| Puerto         | Dirección     | Descripción                                      |
+| :---           | :---          | :---                                             |
+| clk          | Entrada       | Reloj del sistema.                               |
+| resetn       | Entrada       | Reset activo en bajo.                            |
+| spi_mosi     | Salida        | SPI Flash: Master Out Slave In.                  |
+| spi_miso     | Entrada       | SPI Flash: Master In Slave Out.                  |
+| spi_cs_n     | Salida        | SPI Flash: Chip Select (Activo bajo).            |
+| spi_clk      | Salida        | SPI Flash: Clock.                                |
+| spi_clk_ram  | Salida        | SPI RAM: Clock.                                  |
+| spi_cs_n_ram | Salida        | SPI RAM: Chip Select (Activo bajo).              |
+| spi_miso_ram | Entrada       | SPI RAM: Master In Slave Out.                    |
+| spi_mosi_ram | Salida        | SPI RAM: Master Out Slave In.                    |
+| LEDS         | Salida        | Salida para LED de estado del sistema.           |
+| RXD          | Entrada       | UART: Recepción de datos (Serial In).            |
+| TXD          | Salida        | UART: Transmisión de datos (Serial Out).         |
 
 
 Mapeo de las señales internas a los pines estandarizados del proyecto Tiny Tapeout 08.

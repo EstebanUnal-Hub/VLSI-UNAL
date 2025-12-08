@@ -1,245 +1,189 @@
 #!/usr/bin/env python3
 """
-tim_to_pwl_filtered.py
-
-Versión mejorada del convertidor TIM -> .cir (PWL) que:
- - Soporta Digital_Signal y Digital_Bus (p.ej. PC[23:0])
- - Convierte valores bin/hex/dec a vectores de bits
- - Genera PWL tipo "square" por cada bit (sin rampas)
- - Filtra salidas para generar SOLO las fuentes que ya existen en un .cir/.spice de referencia
- - Permite forzar inclusión de buses con --buses
+tim_to_cir_femto.py
+Convierte un .tim (GTKWave) a .cir (ngspice). Maneja Digital_Signal y Digital_Bus,
+descompone buses en bits y genera fuentes PWL. Diseñado para .tim grandes (femto).
+Uso:
+  python3 tim_to_cir_femto.py tt_um_femto.tim [tt_um_femto.cir]
 """
-import re, os, sys, argparse
+import re, sys, math
+from pathlib import Path
+from collections import OrderedDict
 
-# ---------------- utilidades ----------------
-def parse_bus_name(name):
-    m = re.match(r'^(?P<base>[\w\-:.]+)\s*\[\s*(?P<msb>\d+)\s*:\s*(?P<lsb>\d+)\s*\]$', name)
-    if m:
-        return m.group('base'), int(m.group('msb')), int(m.group('lsb'))
-    return name, None, None
+# ---------- CONFIG ----------
+VDD = 3.3
+EPSILON_FACTOR = 1e-3   # epsilon ~ EPSILON_FACTOR * time_scale
+MIN_EPS = 1e-12
+DEFAULT_OUT_SUFFIX = ".cir"
 
-def value_to_bitlist(value_str, width):
-    if value_str is None:
-        return [0]* (width if width is not None else 1)
-    s = value_str.strip()
-    def int_to_bits(i, w):
-        if w is None:
-            w = max(1, i.bit_length())
-        bits = [(i >> b) & 1 for b in range(w)]
-        return bits
-    if re.fullmatch(r'[01]+', s, flags=re.IGNORECASE):
-        bits = [int(ch) for ch in s[::-1]]
-        if width is not None:
-            if len(bits) < width: bits += [0]*(width - len(bits))
-            else: bits = bits[:width]
-        return bits
-    if re.fullmatch(r'0[xX][0-9a-fA-F]+', s):
-        val = int(s, 16)
-        return int_to_bits(val, width)
-    if re.fullmatch(r'\d+', s):
-        val = int(s, 10)
-        return int_to_bits(val, width)
-    return [0]* (width if width is not None else 1)
+# ---------- UTIL ----------
+def safe_name(s):
+    return re.sub(r'[^\w]', '_', s)
 
-def safe_node(base_name, bit_idx=None):
-    safe = re.sub(r'[^\w]', '_', base_name)
-    if bit_idx is None: return safe
-    return f"{safe}_{bit_idx}"
+def hex_to_bits(hexstr, width):
+    try:
+        val = int(hexstr, 16)
+    except Exception:
+        return [0]*width
+    bits = [(val >> i) & 1 for i in range(width)]
+    bits = list(reversed(bits))
+    if len(bits) < width:
+        bits = [0]*(width - len(bits)) + bits
+    return bits[-width:]
 
-def parse_tim_file(content):
-    pattern = r'(Digital_Signal|Digital_Bus)\s*\n(.*?)(?=\nDigital_Signal|\nDigital_Bus|\Z)'
-    blocks = re.findall(pattern, content, flags=re.DOTALL)
-    parsed = []
-    for kind, body in blocks:
-        name_m = re.search(r'Name:\s*(.+)', body)
-        if not name_m: continue
-        name = name_m.group(1).strip()
-        start_m = re.search(r'Start_State:\s*([01XxNnZz])', body)
-        start_state = start_m.group(1).upper() if start_m else None
-        init_val_m = re.search(r'Value:\s*=?\s*([0-9A-Fa-fxX]+)', body)
-        init_val = init_val_m.group(1) if init_val_m else None
-        edge_matches = re.findall(r'Edge:\s*([\d.Ee+-]+)\s+([^\s]+)', body)
-        edges = [(float(t), v) for t, v in edge_matches]
-        parsed.append({
-            'kind': kind,
-            'name': name,
-            'start_state': start_state,
-            'init_val': init_val,
-            'edges': edges,
-            'raw': body
-        })
-    return parsed
+# ---------- PARSER TIM ----------
+def parse_tim(path):
+    txt = Path(path).read_text()
+    m = re.search(r'Time_Scale:\s*([0-9.Ee+\-]+)', txt)
+    time_scale = float(m.group(1)) if m else 1e-12
 
-def generate_pwl_for_bit_series(edges, initial_bit, time_scale, vdd=3.3, eps=None):
-    if eps is None:
-        eps = max(1e-12, time_scale * 1e-6)
-    pwl = []
-    current = initial_bit
-    pwl.append((0.0, vdd if current else 0.0))
-    for t, bit in edges:
-        newv = vdd if bit else 0.0
-        if bit != current:
-            t_sec = t * time_scale
-            pre_t = max(0.0, t_sec - eps)
-            pwl.append((pre_t, vdd if current else 0.0))
-            pwl.append((t_sec, newv))
-            current = bit
+    blocks = re.split(r'(?=Digital_Signal|Digital_Bus)', txt)
+    digital_signals = OrderedDict()
+    digital_buses = OrderedDict()
+
+    for block in blocks:
+        block = block.strip()
+        if not block: continue
+        if block.startswith("Digital_Signal"):
+            nm = re.search(r'Name:\s*([^\r\n]+)', block)
+            if not nm: continue
+            name = nm.group(1).strip()
+            sm = re.search(r'Start_State:\s*([0-9A-FXx])', block)
+            start = sm.group(1).upper() if sm else '0'
+            edges = re.findall(r'Edge:\s*([0-9.\-E]+)\s+([01])', block)
+            edges = [(float(t), int(v)) for t, v in edges]
+            digital_signals[name] = {'start': start, 'edges': edges}
+        elif block.startswith("Digital_Bus"):
+            nm = re.search(r'Name:\s*([^\r\n]+)', block)
+            if not nm: continue
+            name = nm.group(1).strip()
+            sm = re.search(r'Start_State:\s*([0-9A-Fa-f]+)', block)
+            start = sm.group(1).upper() if sm else '0'
+            edges = re.findall(r'Edge:\s*([0-9.\-E]+)\s+([0-9A-Fa-f]+)', block)
+            edges = [(float(t), v.upper()) for t, v in edges]
+            digital_buses[name] = {'start': start, 'edges': edges}
+    return time_scale, digital_signals, digital_buses
+
+# ---------- PWL helper ----------
+def build_pwl_from_points(points, eps):
+    if not points:
+        return [(0.0, 0.0)]
+    if points[0][0] > 0:
+        points = [(0.0, points[0][1])] + points
+    pwl = [(0.0, points[0][1])]
+    cur = points[0][1]
+    for i in range(1, len(points)):
+        t, v = points[i]
+        if v == cur:
+            continue
+        tpre = max(0.0, t - eps)
+        if not (abs(pwl[-1][0] - tpre) < 1e-18 and pwl[-1][1] == cur):
+            pwl.append((tpre, cur))
+        pwl.append((t, v))
+        cur = v
     return pwl
 
-# ---------------- leer nodos/ fuentes existentes ----------------
-def read_existing_voltage_sources(cir_path):
-    """
-    Extrae nombres de fuentes Vxxx del archivo (prefijo V nombre).
-    Devuelve set de nodos seguros (sin prefijo V_). Ejemplo: si hay 'V_PC_0' -> 'PC_0'
-    """
-    if not cir_path or not os.path.exists(cir_path):
-        return set()
-    names = set()
-    with open(cir_path, 'r', errors='ignore') as f:
-        for line in f:
-            # capturar líneas que definen fuente: comienzo de línea opcional espacio, Vname ...
-            m = re.match(r'^\s*[Vv]([A-Za-z0-9_:-]+)\b', line)
-            if m:
-                names.add(m.group(1))  # ejemplo: 'PC_0' si la fuente fue 'VPC_0' en el archivo
-            # También capturar si el netlist usa prefijo "V_" en nombre: V_PC_0
-            m2 = re.match(r'^\s*[Vv]_(\w+)\b', line)
-            if m2:
-                names.add(m2.group(1))
-    # Normalizar: algunos netlists usan V_<node>, otros Vnode; ya añadimos ambas posibilidades
-    return set(names)
+# ---------- MAIN ----------
+def convert_tim_to_cir(tim_path, out_path=None):
+    tim_path = Path(tim_path)
+    if out_path is None:
+        out_path = tim_path.with_suffix(DEFAULT_OUT_SUFFIX)
+    else:
+        out_path = Path(out_path)
 
-# ---------------- conversión principal ----------------
-def convert_tim_to_square_pwl_filtered(tim_filename, output_filename=None, vdd=3.3,
-                                      include_spice='./tt_um_femto.spice', filter_cir=None,
-                                      buses_to_force=None):
-    if output_filename is None:
-        output_filename = tim_filename.replace('.tim', '.cir')
-    spice_filename  = tim_filename.replace('.tim', '.spice')
+    time_scale, dig_sigs, dig_buses = parse_tim(tim_path)
+    epsilon = max(time_scale * EPSILON_FACTOR, MIN_EPS)
 
-    with open(tim_filename, 'r') as f:
-        content = f.read()
+    node_traces = OrderedDict()
 
-    time_scale_match = re.search(r'Time_Scale:\s*([\d.Ee+-]+)', content)
-    time_scale = float(time_scale_match.group(1)) if time_scale_match else 1e-12
-    print(f"Time scale: {time_scale} s (unit from TIM)")
+    # 1) Signals
+    for name, info in dig_sigs.items():
+        start = info['start']
+        edges = sorted(info['edges'], key=lambda x: x[0])
+        pts = [(0.0, VDD if start == '1' else 0.0)]
+        for t_units, val in edges:
+            pts.append((t_units * time_scale, VDD if int(val) == 1 else 0.0))
+        vname = f"V_{safe_name(name)}"
+        node_traces[(vname, name)] = build_pwl_from_points(pts, epsilon)
 
-    parsed = parse_tim_file(content)
-    existing_vs = read_existing_voltage_sources(filter_cir) if filter_cir else set()
-    if filter_cir:
-        print(f"Leídos {len(existing_vs)} fuentes V_ desde {filter_cir}")
-
-    buses_force = set(buses_to_force or [])
-
-    bit_sources = []
-
-    for block in parsed:
-        base, msb, lsb = parse_bus_name(block['name'])
-        is_bus = (msb is not None)
-        width = (abs(msb - lsb) + 1) if is_bus else 1
-        edges = block['edges']
-
-        # Decidir si incluimos este bloque: si hay filter_cir, sólo si:
-        # - existe V_<safe_node> para algún bit del bus OR
-        # - el base aparece en buses_force
-        include_block = True
-        if filter_cir:
-            # Comprobar si cualquier bit del bus existe en existing_vs (V_<node> o <node>)
-            any_present = False
-            for i in range(width):
-                node_name = safe_node(base, i if is_bus else None)
-                # chequear también variantes (sin guion bajo prefijo)
-                if node_name in existing_vs or node_name.lstrip('_') in existing_vs:
-                    any_present = True
-                    break
-            if not any_present and base not in buses_force:
-                include_block = False
-
-        if not include_block:
-            print(f"Omitido (no en filter): {block['name']}")
-            continue
-
-        # obtener init bits
-        if block['init_val']:
-            init_bits = value_to_bitlist(block['init_val'], width)
+    # 2) Buses -> bits (solo añade bits si no existen ya como Digital_Signal)
+    for bus_name, info in dig_buses.items():
+        start_hex = info['start'] if info['start'] else "0"
+        width = max(1, len(start_hex) * 4)
+        # adjust width if edges contain longer hex
+        for _, val in info['edges']:
+            if len(val) > 1:
+                width = max(width, len(val) * 4)
+        # if bus name contains [hi:lo], use exactly that range
+        rng = re.search(r'\[(\d+):(\d+)\]', bus_name)
+        if rng:
+            hi = int(rng.group(1)); lo = int(rng.group(2))
+            width = hi - lo + 1
+            indices = list(range(lo, hi+1))
         else:
-            if block['start_state'] and not is_bus:
-                init_bits = [1] if block['start_state'] == '1' else [0]
-            else:
-                init_bits = [0]*width
-
-        per_bit_edges = [ [] for _ in range(width) ]
-        for t, val in edges:
-            bitlist = value_to_bitlist(val, width)
-            if len(bitlist) < width:
-                bitlist += [0] * (width - len(bitlist))
+            indices = list(range(width))
+        start_bits = hex_to_bits(start_hex, width)
+        # create per-bit traces (index 0..width-1 maps to indices[0..])
+        bit_traces = {i: [(0.0, VDD if start_bits[i] == 1 else 0.0)] for i in range(width)}
+        last_bits = start_bits[:]
+        for t_units, hexval in sorted(info['edges'], key=lambda x: x[0]):
+            t = t_units * time_scale
+            bits = hex_to_bits(hexval, width)
             for i in range(width):
-                per_bit_edges[i].append((t, bitlist[i]))
-
+                v_new = VDD if bits[i] == 1 else 0.0
+                v_last = VDD if last_bits[i] == 1 else 0.0
+                if v_new != v_last:
+                    bit_traces[i].append((t, v_new))
+            last_bits = bits
+        # store only if not present as signal
         for i in range(width):
-            init_bit = init_bits[i] if i < len(init_bits) else 0
-            bit_edge_seq = per_bit_edges[i]
-            pwl_pts = generate_pwl_for_bit_series(bit_edge_seq, init_bit, time_scale, vdd=vdd)
-            node = safe_node(base, i if is_bus else None)
-            # filter again per-bit: si filter_cir existe y este bit no está en existing_vs
-            if filter_cir:
-                if not ( node in existing_vs or node.lstrip('_') in existing_vs or base in buses_force):
-                    # saltar bit que no exista en el netlist de referencia
-                    print(f"  Saltando bit no presente en .cir: {block['name']} bit {i} -> {node}")
-                    continue
-            bit_sources.append({
-                'original_name': block['name'],
-                'bit_index': i if is_bus else None,
-                'node': node,
-                'pwl': pwl_pts
-            })
-        print(f"Procesado: {block['name']}  tipo: {block['kind']}  ancho: {width}  edges: {len(edges)}")
+            idx = indices[i]
+            # build node name consistent with bus (e.g., ui_in[3])
+            node = re.sub(r'\[\d+:\d+\]$', f'[{idx}]', bus_name) if rng else f"{bus_name}[{idx}]"
+            if node in dig_sigs:
+                continue
+            vname = f"V_{safe_name(bus_name)}[{idx}]"
+            node_traces[(vname, node)] = build_pwl_from_points(bit_traces[i], epsilon)
 
-    # --- escribir salida .cir ---
-    with open(output_filename, 'w') as f:
-        f.write(f"* Generated from {tim_filename}\n")
-        f.write(f".lib /usr/local/share/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice tt\n")
-        f.write(f".tran 1000ns 600us\n")
-        f.write(f".print tran format=raw file={os.path.splitext(output_filename)[0]}.raw v(*)\n\n")
+    # compute sim time and timestep
+    max_t = 0.0
+    for pts in node_traces.values():
+        for t, _ in pts:
+            if t > max_t: max_t = t
+    sim_time = max(1e-9, max_t * 1.1)
+    timestep = max(time_scale * 10.0, 1e-12)
+
+    # write .cir
+    with out_path.open("w") as f:
+        f.write(f"* Generated from {tim_path.name}\n")
+        f.write(f"* VDD Level: {VDD} V\n\n")
+        f.write(".lib /usr/local/share/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice tt\n\n")
+        f.write(f".tran {format(timestep, '.12g')} {format(sim_time, '.12g')}\n")
+        f.write(f".print tran format=raw file={out_path.with_suffix('').name}.raw v(*)\n\n")
         f.write("* Power rails\n")
-        f.write("Vvdd VPWR 0 DC 3.3\n")
+        f.write(f"Vvdd VPWR 0 DC {VDD}\n")
         f.write("Vgnd VGND 0 DC 0\n\n")
-        for s in bit_sources:
-            pairs = []
-            for t, val in s['pwl']:
-                pairs.append(f"{t:.12e} {val:.6f}")
-            pwl_text = " ".join(pairs) if pairs else "0.0 0.0"
-            f.write(f"* {s['original_name']} bit {s['bit_index']}\n")
-            # nombre de la fuente: V_<node> para minimizar colisiones
-            f.write(f"V_{s['node']} {s['node']} 0 PWL({pwl_text})\n\n")
-
-        if include_spice:
-            f.write(f".include \"{include_spice}\"\n")
-        if os.path.exists(spice_filename):
-            f.write(f".include \"./{spice_filename}\"\n")
+        for (vname, node), pts in node_traces.items():
+            parts = []
+            for t, v in pts:
+                parts.append(f"{format(t, '.12g')} {format(v, '.6g')}")
+            pwl = "PWL(" + " ".join(parts) + ")"
+            f.write(f"* {node}\n")
+            f.write(f"{vname} {node} 0 {pwl}\n\n")
+        f.write(f".include \"./{tim_path.with_suffix('.spice').name}\"\n")
         f.write(".end\n")
 
-    print(f"\nOutput escrito: {output_filename}  (fuentes generadas: {len(bit_sources)})")
-    return output_filename
+    print(f"Wrote: {out_path}")
+    print(f"Time scale: {time_scale} s  (epsilon={epsilon} s)")
+    print(f"Sim time: {sim_time} s  timestep: {timestep} s")
+    print(f"Signals (PWL sources) written: {len(node_traces)}")
+    return out_path
 
-# ---------------- CLI ----------------
-def main():
-    parser = argparse.ArgumentParser(description="TIM -> .cir PWL (filtrado y buses agrupados)")
-    parser.add_argument("timfile", help="Archivo .tim de entrada")
-    parser.add_argument("--out", "-o", help="Archivo .cir de salida")
-    parser.add_argument("--vdd", type=float, default=3.3, help="Tensión VDD")
-    parser.add_argument("--include", "-i", default="./tt_um_femto.spice", help="Archivo .spice a incluir")
-    parser.add_argument("--filter-cir", "-f", default=None, help="Archivo .cir/.spice de referencia: sólo generar señales que aparezcan aquí")
-    parser.add_argument("--buses", "-b", default=None, help="Lista de buses a forzar, separados por coma. Ej: PC,CP")
-    args = parser.parse_args()
-
-    if not os.path.exists(args.timfile):
-        print("No se encontró el archivo TIM:", args.timfile)
-        sys.exit(1)
-    buses_list = [x.strip() for x in args.buses.split(',')] if args.buses else []
-
-    convert_tim_to_square_pwl_filtered(args.timfile, output_filename=args.out, vdd=args.vdd,
-                                      include_spice=args.include, filter_cir=args.filter_cir,
-                                      buses_to_force=buses_list)
-
+# ---------- CLI ----------
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Uso: python3 tim_to_cir_femto.py <archivo.tim> [<salida.cir>]")
+        sys.exit(1)
+    tim = sys.argv[1]
+    out = sys.argv[2] if len(sys.argv) > 2 else None
+    convert_tim_to_cir(tim, out)

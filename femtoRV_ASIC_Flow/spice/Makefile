@@ -17,10 +17,11 @@ NPROC=4
 
 all: xyce_tim
 
+extract:
+	magic -T /home/linux/.volare/sky130A/libs.tech/magic/sky130A.tech tt_um_${TARGET}.gds
 
 xyce_tim:
-	mpirun -np ${NPROC} Xyce ${TARGET}.cir
-
+	mpirun -np ${NPROC} Xyce tt_um_${TARGET}.cir
 
 clean:
 	rm -rf *.out *.vcd *.svg *.json *.raw *.cir

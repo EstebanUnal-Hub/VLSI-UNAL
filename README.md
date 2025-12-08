@@ -265,7 +265,8 @@ femtoRV_ASIC_Flow/
 │   │   ├── perip_uart.v      # Periférico UART
 │   │   ├── uart.v            # Módulo UART
 │   │   ├── MappedSPIFlash.v  # Interfaz SPI Flash
-│   │   └── MappedSPIRAM.v    # Interfaz SPI RAM
+│   │   ├── MappedSPIRAM.v    # Interfaz SPI RAM
+│   │   └── proyect.v         # Interfaz SPI RAM
 │   ├── tt_um_femto_TB.v      # Testbench principal
 │   ├── firmware.hex          # Firmware compilado
 │   └── tt_um_femto_sim_verilog_2.gtkw  # Configuración GTKWave
@@ -357,8 +358,7 @@ Una vez generado el firmware, se procede con la simulación RTL usando **Icarus 
 | `tt_um_femto_TB.v` | Testbench principal que instancia el diseño completo |
 | `firmware.hex` | Firmware compilado para ejecución |
 | `tt_um_femto_sim_verilog_2.gtkw` | Configuración de visualización de ondas |
-| `cores/sim_spi_flash/spiflash.v` | Modelo de comportamiento de memoria Flash |
-| `cores/sim_spi_ram/spiram.v` | Modelo de comportamiento de memoria RAM |
+
 
 **Proceso de Simulación:**
 
@@ -449,7 +449,7 @@ Una vez verificado el comportamiento funcional del diseño, es necesario exporta
 Desde GTKWave, seleccionar las señales relevantes (clk, reset, señales de entrada/salida) y exportarlas:
 
 ```
-File → Write → Save File As → [nombre].tim
+File → Export → Write TIM File  As 
 ```
 
 Esto genera un archivo de texto con los valores de las señales en función del tiempo, compatible para conversión a formato PWL (Piecewise Linear) utilizado en SPICE.
@@ -554,11 +554,7 @@ Este comando ejecuta automáticamente:
 │   │   └── femto.def          # Design Exchange Format
 │   └── lef/
 │       └── femto.lef          # Library Exchange Format
-└── reports/
-    ├── synthesis/
-    ├── placement/
-    ├── routing/
-    └── signoff/
+└── ...
 ```
 
 ---
@@ -671,8 +667,15 @@ magic -T /home/linux/.volare/sky130A/libs.tech/magic/sky130A.tech femto.gds
 
 # Dentro de Magic:
 extract all
-ext2spice cthresh 0 rthresh 0
+# Luego de tener el archivo .ext
+ext2spice lvs
+ext2spice cthresh infinite
+ext2spice rthresh infinite
+ext2spice subcircuits off
+ext2spice hierarchy off
+ext2spice scale off
 ext2spice
+
 ```
 
 Esto genera un netlist SPICE equivalente al del flujo local, pero basado directamente en el GDSII de fabricación.
@@ -692,36 +695,98 @@ Se obtiene la visualizacion del chip
 
 ---
 
-### 5.6. SPICE Simulation & Analysis / Simulación y Análisis SPICE
+### 5.6. SPICE Simulation & Analysis / Simulación y Análisis SPICE para Multiplicador de 4 Bits
 
-Una vez extraído el netlist SPICE post-layout, se procede con la simulación utilizando **Xyce** (simulador paralelo de alto rendimiento) y el análisis de resultados con Python.
+Para esta sección, se realizó el ejercicio de simulación con un chip de menor complejidad debido al tamaño y complejidad del FemtoRV. Por lo tanto, se aplicó el mismo proceso anterior, pero utilizando un **multiplicador de 4 bits**. A continuación, se presentan los resultados, el uso del Makefile y los programas de conversión de archivos.
 
-**Ubicación:** `femtoRV_ASIC_Flow/spice/`
+**De aquí en adelante, nos ubicaremos en la carpeta `mult_4_ASIC_Flow/`**, que contiene las subcarpetas `sim/` y `spice/`.
 
-#### 5.6.1. Conversión de Estímulos: TIM → PWL
+---
 
-Para simular el diseño post-layout, es necesario convertir los estímulos exportados desde GTKWave (formato `.tim`) a formato PWL (Piecewise Linear) compatible con SPICE.
+#### 5.6.1. Generación del Layout y Extracción SPICE
 
-**Script `tim_to_pwl.py`:**
+Al igual que con el FemtoRV, el archivo `.gds` del multiplicador de 4 bits se obtuvo mediante el template de **Tiny Tapeout** y el flujo automatizado de GitHub Actions.
 
+**Repositorio del proyecto:**  
+🔗 [https://github.com/EstebanUnal-Hub/TT_Mult_4](https://github.com/EstebanUnal-Hub/TT_Mult_4)
 
-#### 5.6.2. Configuración de Xyce para Sky130
+Tras descargar los artefactos generados, se procedió a cargar el layout en **Magic VLSI** para realizar la extracción del netlist SPICE con parásitos.
 
-**IMPORTANTE - Modificación requerida del PDK:**
+**Layout físico del multiplicador de 4 bits:**
 
-Xyce no soporta el parámetro `level = 3.0` presente en algunos modelos del PDK Sky130. Es necesario comentar esta línea antes de ejecutar simulaciones:
+![Layout del Multiplicador de 4 bits](Documents/Mult_4/Magic.png)  
+*Layout del Multiplicador de 4 bits realizado con Magic VLSI. Se utilizaron comandos de extracción para generar el archivo `.spice` con parásitos.*
+
+**Proceso de extracción en Magic:**
 
 ```bash
-# Editar el archivo del modelo de diodo
-sudo nano /usr/local/share/pdk/sky130A/libs.ref/sky130_fd_pr/spice/sky130_fd_pr__diode_pw2nd_05v5.model.spice
-
-# Comentar la línea:
-*+ level = 3.0
+magic -T /home/linux/.volare/sky130A/libs.tech/magic/sky130A.tech tt_um_mult_4.gds
 ```
 
-#### 5.6.3. Automatización con Makefile
+Dentro de la consola de Magic:
 
-**Archivo `Makefile` en `femtoRV_ASIC_Flow/spice/`:**
+```tcl
+extract all
+ext2spice lvs
+ext2spice cthresh infinite
+ext2spice rthresh infinite
+ext2spice
+```
+
+Esto genera el archivo `tt_um_mult_4.spice`, que contiene el netlist con las capacitancias e inductancias parásitas extraídas del layout físico.
+
+---
+
+#### 5.6.2. Visualización del Layout en Tiny Tapeout Viewer
+
+Adicionalmente, el layout del multiplicador se puede visualizar en línea utilizando el **GDS Viewer** de Tiny Tapeout:
+
+🔗 [https://gds-viewer.tinytapeout.com/](https://gds-viewer.tinytapeout.com/)
+
+**Vista del chip en el Viewer:**
+
+![Viewer del Multiplicador](Documents/Mult_4/Viewer.png)  
+*Layout físico del chip multiplicador de 4 bits visto desde el GDS Viewer de Tiny Tapeout. Se observan las celdas estándar, interconexiones y la estructura completa del chip.*
+
+---
+
+#### 5.6.3. Simulación Funcional con GTKWave
+
+Antes de realizar la simulación post-layout con Xyce, se verificó el comportamiento funcional del multiplicador mediante simulación RTL con **Icarus Verilog** y visualización en **GTKWave**.
+
+**Señales de simulación funcional:**
+
+![Simulación GTKWave del Multiplicador](Documents/Mult_4/GTKwave.png)  
+*Simulación funcional del multiplicador de 4 bits. Se observan las señales de entrada (operandos A y B), reloj, reset y las señales de salida del producto parcial (PP).*
+
+Durante la simulación funcional se verificó que:
+- ✅ El multiplicador recibe correctamente los operandos de entrada
+- ✅ Las señales de control (clk, reset) operan adecuadamente
+- ✅ El resultado de la multiplicación es correcto
+- ✅ Las señales de salida se generan sin errores
+
+Al finalizar la simulación, se exportaron las señales de interés en formato `.tim` desde GTKWave para su posterior uso en la simulación SPICE:
+
+```
+File → Export → Write TIM File As → tt_um_mult_4.tim
+```
+
+---
+
+#### 5.6.4. Conversión de Estímulos y Simulación con Xyce
+
+**Ubicación:** `mult_4_ASIC_Flow/spice/`
+
+Una vez extraído el netlist SPICE post-layout y generado el archivo `.tim` con los estímulos, se procedió a la conversión y simulación utilizando **Xyce**.
+
+**Archivos Python de conversión:**
+
+| Archivo | Descripción |
+|---------|-------------|
+| `tim_to_cir.py` | Convierte el archivo `.tim` a formato `.cir` con estímulos PWL |
+| `plot_mult.py` | Genera gráficas de análisis de resultados |
+
+**Automatización con Makefile:**
 
 ```makefile
 ########################################################################################################
@@ -733,70 +798,116 @@ sudo nano /usr/local/share/pdk/sky130A/libs.ref/sky130_fd_pr/spice/sky130_fd_pr_
 # *+ level = 3.0                                                                                      #
 ########################################################################################################
 
-TARGET=femto
-TOP=femto
+TARGET=mult_4
+TOP=mult_4
 NPROC=4
 
-all: xyce_tim
+all: tim_to_pwl xyce_tim plot
 
 xyce_tim:
-	mpirun -np ${NPROC} Xyce ${TARGET}.cir
+	mpirun -np ${NPROC} Xyce tt_um_${TARGET}.cir
+
+extract:
+	magic -T /home/linux/.volare/sky130A/libs.tech/magic/sky130A.tech tt_um_${TARGET}.gds
+
+tim_to_pwl:
+	python tim_to_cir.py tt_um_${TARGET}.tim
+
+plot:
+	python plot_mult.py 
 
 clean:
 	rm -rf *.out *.vcd *.svg *.json *.raw *.cir
 ```
 
-**Ejecutar simulación:**
+**Ejecución del flujo completo:**
 
 ```bash
-cd femtoRV_ASIC_Flow/spice/
+cd mult_4_ASIC_Flow/spice/
 
-# Generar archivo .cir con estímulos PWL
-python tim_to_pwl.py femto.tim  tt_um_femto.spice 
+# 1. Convertir estímulos TIM a formato CIR con PWL
+make tim_to_pwl
 
-# Ejecutar simulación paralela con Xyce (4 procesadores)
+# 2. Ejecutar simulación paralela con Xyce (4 procesadores)
 make xyce_tim
+
+# 3. Generar gráficas de análisis
+make plot
 ```
 
-**Salida esperada:**
+**Detalles de la conversión:**
 
-Xyce genera un archivo `femto_cir.raw` que contiene los resultados de la simulación en formato binario, compatible con herramientas de análisis como PySpice.
-
-#### 5.5.4. Visualización de Resultados con Python
-
-**Script `plot_femto.py`:**
-
-
-**Ejecutar análisis:**
-
-```bash
-python plot_femto.py femto.raw
-```
-
-**Gráficas generadas:**
-
-![Señales SPI Flash y RAM](Documents/SPICE/Otras.png)
-*Interfaces SPI del procesador FemtoRV. Se observan las señales MOSI (Master Out Slave In) y MISO (Master In Slave Out) para memoria Flash y RAM.*
-
-![Señales del contador de programa ](Documents/SPICE/PC.png)
-*Se visualizar los bits asociados al contador de programa y se puede ver los cambios que tiene el transcurso del tiempo.*
-
-![Contador de programa en entero ](Documents/SPICE/PC_INT.png)
-*Se visualizar el contador de programa en entero y se puede ver los cambios que tiene el transcurso del tiempo.*
-
-**Análisis de resultados:**
-
-Los resultados pueden visualizarse para verificar:
-- Propagación de señales a través del chip real con parásitos
-- Delays introducidos por las capacitancias e interconexiones
-- Efectos de carga en las salidas SPI
-- Integridad de señales en comunicación con memorias externas
-- Consumo de corriente del circuito post-layout
+El script `tim_to_cir.py` lee el archivo `tt_um_mult_4.tim` exportado desde GTKWave y genera un archivo `tt_um_mult_4.cir` que incluye:
+- El netlist SPICE extraído del layout
+- Estímulos PWL (Piecewise Linear) para las señales de entrada
+- Configuración de análisis transitorio
+- Directivas de salida para análisis posterior
 
 ---
 
+#### 5.6.5. Visualización y Análisis de Resultados
 
+Una vez completada la simulación con Xyce, se ejecuta el script de Python para generar las gráficas de análisis:
 
+```bash
+python plot_mult.py
+```
+
+Este script genera **tres gráficas principales** que verifican el correcto funcionamiento del multiplicador post-layout:
+
+---
+
+**1. Gráfica de Operandos (Operands):**
+
+![Operandos de entrada](Documents/Mult_4/Operands.png)  
+*Señales de entrada del multiplicador. Se muestran los operandos de la multiplicación:*
+- **Operando A = 5** (binario: `0101`), representado en las señales `A[0]`, `A[1]`, `A[2]`, `A[3]` (siendo `A[0]` el bit menos significativo)
+- **Operando B = 13** (binario: `1101`), representado en las señales `B[0]`, `B[1]`, `B[2]`, `B[3]`
+- **Resultado esperado: 5 × 13 = 65**
+
+---
+
+**2. Gráfica de Señales de Control y Salida (Signals):**
+
+![Señales de control y salida](Documents/Mult_4/Signals.png)  
+*Señales de control y resultado del multiplicador:*
+- **CLK:** Señal de reloj del sistema
+- **Reset:** Señal de reinicio
+- **Out_out (PP):** Señal de salida correspondiente al Producto Parcial (Partial Product) de 8 bits
+- **Resultado observado:** `01000001` (binario) = **65** (decimal) ✅
+
+Esta gráfica confirma que:
+- ✅ El reloj opera correctamente
+- ✅ El reset funciona apropiadamente
+- ✅ El resultado de la multiplicación (PP) es correcto: 5 × 13 = 65
+
+---
+
+**3. Gráfica del Producto Parcial en Entero (MultResultPP):**
+
+![Producto parcial en entero](Documents/Mult_4/MultResultPP.png)  
+*Comportamiento del Producto Parcial (PP) en formato entero a lo largo del tiempo.*
+
+En esta gráfica se observa:
+- La evolución temporal de la señal de salida PP
+- Al finalizar el tiempo de ejecución (señal `Done`), el valor de PP es **65** (decimal)
+- La estabilidad de la señal de salida tras la computación
+
+---
+
+#### 5.6.6. Conclusiones de la Simulación Post-Layout
+
+Los resultados de la simulación SPICE post-layout demuestran que:
+
+✅ **El chip del multiplicador responde adecuadamente a las señales de entrada** (operandos A = 5, B = 13)  
+✅ **Las señales de salida funcionan correctamente**, generando el resultado esperado (PP = 65)  
+✅ **Los parásitos extraídos del layout no afectan la funcionalidad** del diseño  
+✅ **El timing del circuito es adecuado** para la frecuencia de operación configurada  
+✅ **La integridad de las señales se mantiene** a través de las interconexiones físicas del chip
+
+Estos resultados validan que el diseño del multiplicador de 4 bits está listo para fabricación, habiendo pasado exitosamente por todas las etapas del flujo ASIC, desde la simulación funcional RTL hasta la simulación post-layout con parásitos reales extraídos del GDSII.
+
+---
 ## 6. Results & Verification / Resultados y Verificación
 
 ### 6.1. Métricas del Diseño

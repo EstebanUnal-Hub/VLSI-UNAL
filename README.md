@@ -714,7 +714,7 @@ Tras descargar los artefactos generados, se procedió a cargar el layout en **Ma
 
 **Layout físico del multiplicador de 4 bits:**
 
-![Layout del Multiplicador de 4 bits](Documents/Mult_4/Magic.png)  
+![Layout del Multiplicador de 4 bits](Documents/Mult_4/Magis.png)  
 *Layout del Multiplicador de 4 bits realizado con Magic VLSI. Se utilizaron comandos de extracción para generar el archivo `.spice` con parásitos.*
 
 **Proceso de extracción en Magic:**
@@ -908,45 +908,9 @@ Los resultados de la simulación SPICE post-layout demuestran que:
 Estos resultados validan que el diseño del multiplicador de 4 bits está listo para fabricación, habiendo pasado exitosamente por todas las etapas del flujo ASIC, desde la simulación funcional RTL hasta la simulación post-layout con parásitos reales extraídos del GDSII.
 
 ---
-## 6. Results & Verification / Resultados y Verificación
 
-### 6.1. Métricas del Diseño
 
-Tras completar el flujo RTL-to-GDSII, OpenLane genera reportes detallados sobre el diseño:
-
-| Métrica | Valor |
-|---------|-------|
-| Área total | [TBD] µm² |
-| Utilización | [TBD]% |
-| Número de celdas | [TBD] |
-| Frecuencia máxima | [TBD] MHz |
-| Violaciones DRC | 0 |
-| Violaciones LVS | 0 |
-
-### 6.2. Verificaciones Completadas
-
-✅ **Functional Verification:** Simulación RTL exitosa  
-✅ **Logic Synthesis:** Netlist generado sin errores  
-✅ **Physical Implementation:** GDSII generado  
-✅ **DRC:** Sin violaciones de reglas de diseño  
-✅ **LVS:** Layout coincide con netlist  
-✅ **Post-Layout Extraction:** SPICE netlist extraído con parásitos  
-✅ **SPICE Simulation:** Simulación post-layout con Xyce completada  
-✅ **Signal Integrity Analysis:** Verificación de integridad de señales SPI
-
----
-
-## 7. Next Steps / Próximos Pasos
-
-- [ ] Optimización de frecuencia de reloj
-- [ ] Simulaciones de corner cases (tt, ff, ss)
-- [ ] Análisis de consumo de potencia (Power Analysis)
-- [ ] Caracterización de delays con temperatura
-- [ ] Preparación para tapeout final
-
----
-
-## 8. References / Referencias
+## 7. References / Referencias
 
 - [FemtoRV GitHub Repository](https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV)
 - [Tiny Tapeout Documentation](https://tinytapeout.com/docs)

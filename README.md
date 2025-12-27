@@ -946,9 +946,13 @@ Estos resultados validan que el diseño del multiplicador de 4 bits está listo 
 
 
 ## 7. References / Referencias
-
+- [Github VLSI-UNAL Esteban](https://github.com/EstebanUnal-Hub/VLSI-UNAL)
+- [Github VLSI Camargo](https://github.com/cicamargoba/VLSI)
+- [Introduction to ASIC Flow](https://github.com/KanishR1/Introduction-to-ASIC-Flow)
+- [Tiny Tapeout Template](https://github.com/TinyTapeout/ttsky-verilog-template)
 - [FemtoRV GitHub Repository](https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV)
-- [Tiny Tapeout Documentation](https://tinytapeout.com/docs)
+- [IIC-OSIC-TOOLS](https://github.com/iic-jku/IIC-OSIC-TOOLS)
+- [Tiny Tapeout Documentation](https://tinytapeout.com/)
 - [OpenLane Documentation](https://openlane.readthedocs.io)
 - [SkyWater PDK Documentation](https://skywater-pdk.readthedocs.io)
 - [Magic VLSI Layout Tool](http://opencircuitdesign.com/magic/)
